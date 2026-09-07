@@ -1,0 +1,22 @@
+# ==============================================================================
+# Development, Linting, Testing & Code Quality Tooling
+# ==============================================================================
+
+-r requirements.txt
+
+# Testing Frameworks
+pytest==7.4.3
+pytest-cov==4.1.0
+pytest-mock==3.12.0
+
+# Code Formatting & Static Analysis
+black==23.12.1
+isort==5.13.2
+flake8==7.0.0
+flake8-bugbear==23.12.2
+
+# SQL Linting & Modeling Formatter
+sqlfluff==2.3.5
+
+# Git Pre-commit Framework
+pre-commit==3.6.0
