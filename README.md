@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🛒 Modern E-Commerce Data Lakehouse Platform
+# Modern E-Commerce Data Lakehouse Platform
 ### Enterprise-Grade Lakehouse Architecture with Medallion Pattern, Delta Lake, Apache Spark, Trino, dbt, Apache Airflow, Apache Ranger, Metabase & Spark MLlib
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -16,105 +16,70 @@
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED.svg?logo=docker&logoColor=white)](https://www.docker.com/)
 [![Kubernetes](https://img.shields.io/badge/Kubernetes-Helm-326CE5.svg?logo=kubernetes&logoColor=white)](https://kubernetes.io/)
 
-**Author:** [Dung Tran](https://github.com/dungtran174) &nbsp;|&nbsp; **Repository:** [ecommerce-lakehouse-platform](https://github.com/dungtran174/ecommerce-lakehouse-platform)
 
 </div>
 
 ---
 
-## 📖 Table of Contents
+## Table of Contents
 
-- [Overview & Business Motivation](#-overview--business-motivation)
-- [System Architecture](#-system-architecture)
-- [Medallion Data Lakehouse Design](#-medallion-data-lakehouse-design)
-- [Key Features & Capabilities](#-key-features--capabilities)
-- [Technology Stack](#-technology-stack)
-- [Repository Structure](#-repository-structure)
-- [Getting Started](#-getting-started)
-  - [Prerequisites](#prerequisites)
-  - [Local Development (Docker Compose)](#local-development-docker-compose)
-  - [Running Data Pipelines](#running-data-pipelines)
-- [Data Governance & Security](#-data-governance--security)
-- [Business Intelligence & Dashboards](#-business-intelligence--dashboards)
-- [Machine Learning: Purchase Prediction](#-machine-learning-purchase-prediction)
-- [Project Roadmap](#-project-roadmap)
-- [References](#-references)
+- [1. Business Context & Problem Statement](#1-business-context--problem-statement)
+- [2. System Architecture](#2-system-architecture)
+- [3. Medallion Lakehouse Design](#3-medallion-lakehouse-design)
+- [4. Tech Stack](#4-tech-stack)
+- [5. Repository Structure](#5-repository-structure)
+- [6. Data Governance & Security](#6-data-governance--security)
+- [7. Business Intelligence & Dashboards](#7-business-intelligence--dashboards)
+- [8. Machine Learning: Customer Purchase Prediction](#8-machine-learning-customer-purchase-prediction)
+- [9. Quick Start & Operational Lifecycle](#9-quick-start--operational-lifecycle)
+- [10. References](#10-references)
 
 ---
 
-## 🎯 Overview & Business Motivation
+## 1. Business Context & Problem Statement
 
-Modern e-commerce enterprises face immense challenges when extracting value from high-velocity, heterogeneous data streams:
-1. **Diverse Data Silos:** High-value relational transactional records (orders, inventory, payment methods, customer tiers) coexist alongside high-volume, semi-structured behavioral clickstream events (search terms, product impressions, cart updates, UTM campaign traffic).
-2. **Limitations of Traditional Data Warehouses:** High storage costs, proprietary lock-in, rigid "schema-on-write" rules, and difficulty scaling to handle terabytes of semi-structured JSON clickstream data.
-3. **Pitfalls of Traditional Data Lakes:** Lack of ACID transaction guarantees, data reliability degradation ("data swamp"), inability to perform fine-grained updates or deletions (GDPR compliance), and slow query performance for Business Intelligence.
+### The Analytics Bottleneck in Modern E-Commerce
+Modern 24/7 e-commerce platforms generate dual streams of high-volume data:
+- **Transactional Entities (OLTP):** Orders, line items, customer profiles, product catalogs, and payment methods. Running analytical reporting queries directly on operational relational databases creates resource contention, locking, and degraded checkout responsiveness.
+- **Behavioral Clickstream Events:** Web and mobile interaction events (page impressions, search keywords, cart updates, checkout attempts). These semi-structured streams reach gigabytes to terabytes daily and cannot be accommodated by traditional schema-on-write warehouses without expensive ETL pre-processing.
 
-### The Solution: An Open Data Lakehouse
-This platform implements an end-to-end **Data Lakehouse** architecture unifying batch and clickstream analytical processing over **Delta Lake** and **MinIO (S3-compatible)** object storage:
-- **Single Source of Truth:** Unifies raw storage and dimensional modeling without duplicating data between separate lake and warehouse engines.
-- **ACID Reliability:** Provides snapshot isolation, ACID transactions, and schema enforcement using Delta Lake.
-- **Enterprise Governance:** Enforces fine-grained Role-Based Access Control (RBAC) and PII data masking using **Apache Ranger** via Trino.
-- **End-to-End Automation:** Orchestrates ingestion, multi-layer dbt modeling, data quality testing, machine learning inference, and BI reporting with **Apache Airflow**.
-
----
-
-## 🏗 System Architecture
-
-The platform separates compute from storage across five distinct architectural layers:
-
-```mermaid
-flowchart LR
-    subgraph S1 ["1. Data Sources"]
-        MySQL[("MySQL RDBMS\n(OLTP Transactions)")]
-        WebLog["Web Server\n(Clickstream NDJSON ~12GB)"]
-    end
-
-    subgraph S2 ["2. Storage Layer (MinIO)"]
-        direction TB
-        BZ["Bronze Layer\n(Raw CSV & NDJSON)"]
-        SL["Silver Layer (Delta)\n(Cleansed & Flattened)"]
-        GD["Gold Layer (Delta)\n(Galaxy Schema & Features)"]
-        BZ --> SL --> GD
-    end
-
-    subgraph S3 ["3. Compute & Orchestration"]
-        Airflow["Apache Airflow\n(Workflow Scheduler)"]
-        Spark["Apache Spark 3.3\n(Distributed Engine)"]
-        dbt["dbt-spark\n(SQL Modeling & Tests)"]
-        HMS[("Hive Metastore\n(Metadata Catalog)")]
-    end
-
-    subgraph S4 ["4. Security & Serving"]
-        Trino["Trino SQL Engine\n(Direct Delta Queries)"]
-        Ranger["Apache Ranger\n(RBAC & PII Masking)"]
-    end
-
-    subgraph S5 ["5. Consumption"]
-        Metabase["Metabase BI\n(Executive Dashboards)"]
-        CloudBeaver["CloudBeaver\n(Ad-hoc SQL IDE)"]
-        MLlib["Spark MLlib\n(Purchase Prediction)"]
-    end
-
-    S1 -->|Ingestion DAGs| Airflow
-    Airflow -->|Stage Data| BZ
-    Spark <--> HMS
-    Spark <--> S2
-    dbt --> Spark
-    Trino <--> HMS
-    Trino <--> S2
-    Trino --- Ranger
-    Trino --> Metabase
-    Trino --> CloudBeaver
-    GD --> MLlib
-```
-
-For complete technical specifications, see [docs/architecture.md](docs/architecture.md).
+### The Decoupled Lakehouse Solution
+This platform implements an open-format **Data Lakehouse** architecture:
+1. **Separation of Compute and Storage:** Scalable distributed object storage (**MinIO**) decoupled from processing engines (**Spark**, **Trino**).
+2. **ACID Transactional Guarantees:** **Delta Lake** provides serializable isolation, schema enforcement, time-travel auditing, and efficient partition pruning over Apache Parquet.
+3. **Enterprise Security & Governance:** Centralized Role-Based Access Control (RBAC) and dynamic PII column masking via **Apache Ranger** and the Trino-Ranger plugin.
+4. **End-to-End Workflow Automation:** Scheduled pipelines managed by **Apache Airflow** coordinate ingestion, multi-tier dbt transformations, automated quality assertions, and ML inference scoring.
 
 ---
 
-## 🥉🥈🥇 Medallion Data Lakehouse Design
+## 2. System Architecture
 
-Data progresses through three quality tiers inside the Lakehouse:
+![System Architecture](images/architecture.png)
+
+### Data Flow Lifecycle
+1. **Source Ingestion:**
+   - Transactional tables are extracted from MySQL in batch snapshots and incremental slices via JDBC into the Bronze landing zone.
+   - User activity logs (~12GB NDJSON) are transferred from web application nodes via SFTP into daily partition folders in Bronze.
+2. **Storage & Metadata Management:**
+   - Raw files reside in MinIO S3 buckets (`lakehouse/bronze/`).
+   - Apache Hive Metastore (HMS) maintains catalog metadata, schemas, and partition locations.
+3. **Data Transformation & Cleansing (Silver Layer):**
+   - dbt models run on Spark Thrift Server to flatten nested JSON structs, cast strict data types, sanitize PII, and register Delta Lake tables.
+4. **Dimensional Modeling & Feature Stores (Gold Layer):**
+   - Kimball Galaxy Schema (`sale_mart`) materializes dimension tables and granular fact tables.
+   - Rolling 3-day behavioral features are generated into `ml.user_behavior_3d_agg_feature`.
+5. **Serving & Query Federation:**
+   - Trino executes distributed MPP queries against Delta Lake tables with zero data duplication.
+   - Apache Ranger enforces fine-grained authorization before query compilation.
+6. **Downstream Consumption:**
+   - Metabase renders executive and operational dashboards.
+   - Spark MLlib trains a Logistic Regression classifier to predict next-day purchase probability.
+
+For in-depth architectural specifications and diagrams, refer to [docs/architecture.md](docs/architecture.md).
+
+---
+
+## 3. Medallion Lakehouse Design
 
 | Layer | Storage & Format | Data Entities & Tables | Processing Objectives |
 | :--- | :--- | :--- | :--- |
@@ -122,40 +87,28 @@ Data progresses through three quality tiers inside the Lakehouse:
 | **Silver** | MinIO `lakehouse/silver/`<br>**Delta Lake** (Parquet) | - `silver.customer`<br>- `silver.products`<br>- `silver.brands`<br>- `silver.category`<br>- `silver.payment_method`<br>- `silver.orders`<br>- `silver.order_items`<br>- `silver.user_sessions` *(Partitioned by Y/M/D)*<br>- `silver.session_actions` *(Partitioned by Y/M/D)* | Cleansed, strongly typed, and deduplicated conformed tables. Flattens nested JSON payloads, sanitizes PII, and applies ACID guarantees. |
 | **Gold** | MinIO `lakehouse/gold/`<br>**Delta Lake** (Parquet) | **Sale Mart (Kimball Galaxy Schema):**<br>- `sale_mart.dim_customer`<br>- `sale_mart.dim_product`<br>- `sale_mart.dim_date`<br>- `sale_mart.dim_payment_method` *(SCD2)*<br>- `sale_mart.fact_order`<br>- `sale_mart.fact_order_items`<br>**ML & Marketing Marts:**<br>- `ml.user_behavior_3d_agg_feature`<br>- `marketing.high_value_purchase_campaign` | Production analytical data marts optimized for executive BI dashboards, ad-hoc OLAP exploration, and rolling 3-day ML feature stores. |
 
-Detailed field definitions and constraints are documented in [docs/data_dictionary.md](docs/data_dictionary.md).
+For detailed field definitions, constraints, and data types, refer to [docs/data_dictionary.md](docs/data_dictionary.md).
 
 ---
 
-## 🚀 Key Features & Capabilities
+## 4. Tech Stack
 
-- **Delta Lake ACID Transactions:** Eliminates partial-write corruptions during pipeline failures; supports concurrent read/writes.
-- **Time Travel & Data Auditing:** Query historical snapshots of customer profiles and catalog states.
-- **Distributed Query Federation with Trino:** Query Delta Lake tables at scale without requiring proprietary data warehouse licenses.
-- **Centralized Security Governance:** Column-level data masking (e.g., masking customer phone numbers and emails) and table access control using Apache Ranger.
-- **Modular Data Modeling with dbt:** Declarative transformations, automated testing (`unique`, `not_null`, foreign keys), and complete documentation generation.
-- **Behavioral Feature Engineering & Machine Learning:** End-to-end Spark MLlib classification pipeline predicting customer conversion probability from clickstream interactions.
-- **Dual Deployment Options:** Full local evaluation via Docker Compose and production cloud deployment via Kubernetes manifests and Helm charts.
-
----
-
-## 🛠 Technology Stack
-
-| Layer | Technology | Purpose |
+| Component | Technology | Role & Purpose |
 | :--- | :--- | :--- |
-| **Storage** | [MinIO](https://min.io/) | High-performance, S3-compatible distributed object storage |
-| **Table Format** | [Delta Lake 2.2](https://delta.io/) | Open-source storage layer enabling ACID transactions on Parquet |
-| **Metadata Catalog**| [Apache Hive Metastore 3.0](https://hive.apache.org/) | Centralized schema registry for Delta Lake tables |
-| **Compute Engine** | [Apache Spark 3.3](https://spark.apache.org/) | Distributed in-memory data processing & MLlib engine |
-| **Transformation** | [dbt-spark 1.7](https://www.getdbt.com/) | Data transformation and testing workflow using SQL |
-| **Orchestration** | [Apache Airflow 2.7](https://airflow.apache.org/) | DAG-based workflow scheduling and dependency management |
-| **Query Engine** | [Trino](https://trino.io/) | Fast distributed SQL query engine for interactive analytics |
-| **Governance** | [Apache Ranger](https://ranger.apache.org/) | Centralized security, RBAC, and dynamic column masking |
-| **BI & Analytics** | [Metabase](https://www.metabase.com/) & [CloudBeaver](https://cloudbeaver.io/) | Business intelligence reporting and web-based SQL exploration |
-| **Infrastructure** | [Docker](https://www.docker.com/) & [Kubernetes](https://kubernetes.io/) | Containerization and container orchestration |
+| **Object Storage** | [MinIO](https://min.io/) | S3-compatible distributed object storage for all Medallion tiers |
+| **Table Format** | [Delta Lake 2.2](https://delta.io/) | ACID transactions, time travel, and metadata indexing over Parquet |
+| **Catalog Registry** | [Apache Hive Metastore 3.0](https://hive.apache.org/) | Centralized metastore mapping Delta tables to logical schemas |
+| **Compute Engine** | [Apache Spark 3.3](https://spark.apache.org/) | Distributed in-memory data processing, Thrift server, and Spark MLlib |
+| **Transformation** | [dbt-spark 1.7](https://www.getdbt.com/) | Modular SQL data transformation, testing, and schema documentation |
+| **Orchestration** | [Apache Airflow 2.7](https://airflow.apache.org/) | DAG scheduling, dependency management, and automated retries |
+| **Serving Engine** | [Trino](https://trino.io/) | Distributed MPP SQL engine for sub-second analytical queries |
+| **Governance** | [Apache Ranger](https://ranger.apache.org/) | Centralized access control, RBAC, and dynamic column masking |
+| **BI & Analytics** | [Metabase](https://www.metabase.com/) & [CloudBeaver](https://cloudbeaver.io/) | Executive BI dashboard reporting and web SQL IDE exploration |
+| **Infrastructure** | [Docker](https://www.docker.com/) & [Kubernetes](https://kubernetes.io/) | Multi-container compose stack and cloud-native Helm deployments |
 
 ---
 
-## 📁 Repository Structure
+## 5. Repository Structure
 
 ```
 ecommerce-lakehouse-platform/
@@ -176,6 +129,7 @@ ecommerce-lakehouse-platform/
 │   └── tests/                           # Schema validations and business assertions
 ├── docker/                              # Docker Compose stack & custom Dockerfiles
 ├── docs/                                # Architecture, data dictionary, runbooks
+├── images/                              # Architecture diagrams and dashboard screenshots
 ├── k8s/                                 # Kubernetes base manifests, ingress, Helm values
 ├── ml/                                  # Zeppelin notebooks & PySpark ML pipelines
 ├── scripts/                             # Automation scripts (MinIO init, bootstrap, tests)
@@ -187,106 +141,76 @@ ecommerce-lakehouse-platform/
 
 ---
 
-## ⚡ Getting Started
-
-### Prerequisites
-- **Docker** (>= 24.0) & **Docker Compose** (>= 2.20)
-- **Python** (>= 3.10, <= 3.11)
-- **Make** utility
-
-### Local Development (Docker Compose)
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/dungtran174/ecommerce-lakehouse-platform.git
-   cd ecommerce-lakehouse-platform
-   ```
-
-2. **Initialize development environment:**
-   ```bash
-   make setup
-   ```
-
-3. **Start the Lakehouse Docker stack:**
-   ```bash
-   make docker-up
-   ```
-
-4. **Initialize MinIO buckets & storage:**
-   ```bash
-   make init-lakehouse
-   ```
-
-5. **Generate synthetic E-commerce data:**
-   ```bash
-   make seed-data
-   ```
-
-### Running Data Pipelines
-- **Apache Airflow UI:** Navigate to `http://localhost:8080` (credentials: `admin` / `admin`).
-- Trigger the core DAGs:
-  - `oltp_data_pipeline`: Ingests transactional tables, executes dbt Silver/Gold models.
-  - `user_activity_logs_pipeline`: Ingests clickstream logs, flattens sessions and actions.
-  - `marketing_campaign_ml_pipeline`: Prepares 3-day features, trains Logistic Regression model, scores leads.
-
----
-
-## 🔒 Data Governance & Security
+## 6. Data Governance & Security
 
 Using **Apache Ranger** integrated with **Trino**:
-- **Role-Based Access Control:** Data Analysts access `sale_mart.*` but are restricted from accessing raw PII marketing data.
-- **Dynamic Column Masking:** Customer email addresses and phone numbers are automatically masked (`hash` or `partial-mask`) for unauthorized roles.
-- **Comprehensive Auditing:** All read/write attempts to Delta tables are logged for compliance.
+- **Role-Based Access Control (RBAC):** Restricts access to sensitive data marts. For example, marketing campaign leads are restricted to marketing personnel, while standard analysts can query only aggregated sale metrics.
+- **Dynamic Column Masking:** Sensitive customer fields (`phone_number`, `email`) are masked dynamically for unauthorized roles.
+- **Audit Logging:** Every read and write transaction against Delta Lake tables is recorded for compliance.
 
 ---
 
-## 📊 Business Intelligence & Dashboards
+## 7. Business Intelligence & Dashboards
 
-Interactive dashboards deployed on **Metabase** connecting directly to **Trino**:
-- **Revenue Overview:** Year-over-Year (YoY) revenue and order volume trends.
-- **Product & Category Performance:** Top 10 bestselling SKUs by revenue and unit volume.
-- **Geographic Sales Analysis:** Regional breakdown of order volumes across Vietnamese provinces.
-- **Payment Method Distribution:** Market share of digital wallets (Momo, ZaloPay, ShopeePay) vs COD.
+![Metabase Dashboard](images/dashboard.png)
 
----
-
-## 🤖 Machine Learning: Purchase Prediction
-
-- **Algorithm:** Spark MLlib Logistic Regression with standardized feature vectors.
-- **Feature Set:** 3-day rolling window capturing user engagement (`sessions_3d`, `duration`, `page_views`, `actions_per_session`, `cart_conversion_rate`).
-- **Target Label:** Binary flag indicating whether the user purchases on day $T+1$.
-- **Model Performance:** **AUC-ROC ~ 0.78**, **F1-Score ~ 0.74** on synthetic test cohorts.
-- **Business Actionability:** Automatic population of `marketing.high_value_purchase_campaign` with personalized engagement actions (SMS, Push Notification, Email).
+Production dashboards configured on **Metabase** connect directly to **Trino**:
+1. **Executive Revenue Overview:** Year-over-Year revenue growth, total gross orders, and average order value (AOV).
+2. **Product & Brand Performance:** Top 10 bestselling products by volume and revenue; performance distribution by brand origin.
+3. **Geographic Distribution:** Order volume and revenue heatmaps across Vietnamese provinces.
+4. **Payment Channel Adoption:** Market share breakdown across digital wallets (Momo, ZaloPay, ShopeePay, VNPay), bank transfer, and COD.
 
 ---
 
-## 🗺 Project Roadmap
+## 8. Machine Learning: Customer Purchase Prediction
 
-- [x] **Phase 1:** Project initialization, architecture specification, data dictionary, CI/CD linting, Makefile, and README.
-- [ ] **Phase 2:** Storage & metadata infrastructure (MinIO distributed cluster, Apache Hive Metastore, Kubernetes manifests).
-- [ ] **Phase 3:** Custom Spark Thrift Server container with Delta Lake and AWS S3 connectors.
-- [ ] **Phase 4:** High-fidelity synthetic E-Commerce data generators (OLTP relational & Clickstream NDJSON).
-- [ ] **Phase 5:** Apache Airflow orchestration platform setup and connection bootstrapping.
-- [ ] **Phase 6:** Bronze layer data ingestion pipelines.
-- [ ] **Phase 7:** dbt project initialization with Spark adapter and schema contracts.
-- [ ] **Phase 8:** Silver layer data cleansing and Delta Lake transformation models.
-- [ ] **Phase 9:** Gold layer Kimball Galaxy Schema (Sale Mart) implementation.
-- [ ] **Phase 10:** Feature Store engineering and Spark MLlib purchase prediction pipeline.
-- [ ] **Phase 11:** Trino serving engine deployment and Apache Ranger security governance.
-- [ ] **Phase 12:** Consumption layer setup (Metabase BI dashboards & CloudBeaver).
-- [ ] **Phase 13:** End-to-end integration testing, Delta maintenance, and documentation finalization.
+- **Algorithm:** Spark MLlib Logistic Regression with standardized feature vectors (`VectorAssembler` + `StandardScaler`).
+- **Feature Set:** 12 behavioral metrics aggregated across a rolling 3-day window (`sessions_3d`, `duration`, `page_views`, `actions_per_session`, `cart_conversion_rate`, `distinct_products`).
+- **Target Label:** Binary outcome indicating whether the user completes a purchase on day $T+1$.
+- **Model Evaluation:** Evaluated with **AUC-ROC ~ 0.78** and **F1-Score ~ 0.74**.
+- **Actionability:** Daily batch inference automatically populates `marketing.high_value_purchase_campaign` with personalized engagement actions (SMS, Push Notification, Email).
 
 ---
 
-## 📚 References
+## 9. Quick Start & Operational Lifecycle
+
+### Prerequisites
+- Docker (>= 24.0) & Docker Compose (>= 2.20)
+- Python (>= 3.10, <= 3.11)
+
+### 1. Initialize Environment
+```bash
+make setup
+```
+
+### 2. Start Lakehouse Stack
+```bash
+make docker-up
+```
+
+### 3. Initialize MinIO Buckets
+```bash
+make init-lakehouse
+```
+
+### 4. Seed Synthetic E-Commerce Datasets
+```bash
+make seed-data
+```
+
+### 5. Access Services
+- **Airflow Webserver:** `http://localhost:8080` (admin / admin)
+- **MinIO Console:** `http://localhost:9001` (minioadmin / minioadmin)
+- **Trino Web UI:** `http://localhost:8085`
+- **Metabase:** `http://localhost:3000`
+- **CloudBeaver:** `http://localhost:8978`
+
+---
+
+## 10. References
 
 1. Armbrust, M., et al. (2020). *Lakehouse: A New Generation of Open Platforms that Unify Data Warehousing and Advanced Analytics*. Proceedings of CIDR 2021.
 2. Kimball, R., & Ross, M. (2013). *The Data Warehouse Toolkit: The Definitive Guide to Dimensional Modeling* (3rd ed.). Wiley.
 3. Delta Lake Documentation: [https://docs.delta.io/](https://docs.delta.io/)
 4. Trino Distributed Query Engine: [https://trino.io/docs/](https://trino.io/docs/)
 5. Apache Ranger Architecture: [https://ranger.apache.org/](https://ranger.apache.org/)
-
----
-
-<div align="center">
-Developed by <b>Dung Tran</b> &bull; Star ⭐ this repository if you find it helpful!
-</div>
