@@ -1,0 +1,113 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Environment Variables & Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+credentials.json
+service_account.json
+
+# IDE and Editor Files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
+# dbt artifacts
+dbt/target/
+dbt/dbt_packages/
+dbt/dbt_modules/
+dbt/logs/
+target/
+dbt_packages/
+
+# Apache Airflow
+airflow/logs/
+airflow/*.pid
+airflow/*.err
+airflow/*.log
+airflow/airflow.db
+
+# Apache Spark & Hadoop
+derby.log
+metastore_db/
+spark-warehouse/
+.spark-staging/
+metastore_db.lck
+
+# Large Data & Raw Event Files (Exclude raw mock dumps)
+*.parquet
+*.csv.gz
+*.tar.gz
+*.zip
+data/
+data_generators/output/
+logs/ingest_date=*
+*.ndjson
+*.csv
+
+# Exceptions for gitkeep and schema definitions
+!data_generators/sample_data/
+!data_generators/sample_data/*.csv
+!data_generators/sample_data/*.ndjson
+!.gitkeep
+
+# Docker & Local Storage mounts
+.minio.sys/
+minio_data/
+mysql_data/
+metabase_data/
+postgres_data/
+
+# Testing & Coverage
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.tox/
+.nox/
