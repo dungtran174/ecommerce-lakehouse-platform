@@ -1,0 +1,93 @@
+name: CI Code Quality & Linting
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  lint-python:
+    name: Lint Python (Black, isort, Flake8)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install Linting Tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install black==23.12.1 isort==5.13.2 flake8==7.0.0 flake8-bugbear==23.12.2
+
+      - name: Run Black Formatter Check
+        run: |
+          black --check --diff .
+
+      - name: Run isort Import Order Check
+        run: |
+          isort --check-only --diff .
+
+      - name: Run Flake8 Linter
+        run: |
+          flake8 .
+
+  lint-sql:
+    name: Lint SQL (SQLFluff SparkSQL)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install SQLFluff
+        run: |
+          python -m pip install --upgrade pip
+          pip install sqlfluff==2.3.5
+
+      - name: Run SQLFluff Lint on dbt Models
+        run: |
+          if [ -d "dbt/models" ] && [ "$(find dbt/models -name '*.sql' | wc -l)" -gt 0 ]; then
+            sqlfluff lint dbt/models --dialect sparksql
+          else
+            echo "No SQL models found yet. Skipping."
+          fi
+
+  lint-yaml:
+    name: Validate YAML Files
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install PyYAML
+        run: pip install pyyaml==6.0.1
+
+      - name: Validate YAML Syntax
+        run: |
+          python -c "
+          import yaml, glob
+          yaml_files = glob.glob('**/*.yml', recursive=True) + glob.glob('**/*.yaml', recursive=True)
+          for f in yaml_files:
+              if 'target' not in f and 'dbt_packages' not in f:
+                  with open(f, 'r') as stream:
+                      try:
+                          yaml.safe_load(stream)
+                      except Exception as e:
+                          print(f'Syntax error in {f}: {e}')
+                          exit(1)
+          print('All YAML configuration files are syntactically valid!')
+          "
