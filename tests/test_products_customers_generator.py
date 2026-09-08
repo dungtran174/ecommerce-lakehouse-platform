@@ -81,7 +81,7 @@ class TestProductCustomerGenerator(unittest.TestCase):
         self.assertIn("products", files)
         self.assertIn("customers", files)
 
-        for name, path in files.items():
+        for _name, path in files.items():
             self.assertTrue(os.path.exists(path))
             with open(path, "r", encoding="utf-8") as f:
                 reader = csv.reader(f)

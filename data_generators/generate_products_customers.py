@@ -433,9 +433,9 @@ class ProductCustomerGenerator:
             phone_num = f"{prefix}{self.rng.randint(1000000, 9999999)}"
 
             # Loyalty tier selection according to probability weights
-            tier = self.rng.choices(
-                CUSTOMER_TIERS, weights=CUSTOMER_TIER_WEIGHTS, k=1
-            )[0]
+            tier = self.rng.choices(CUSTOMER_TIERS, weights=CUSTOMER_TIER_WEIGHTS, k=1)[
+                0
+            ]
 
             address = self.rng.choice(VIETNAMESE_PROVINCES)
 
@@ -536,9 +536,7 @@ class ProductCustomerGenerator:
                 total_written += chunk_len
 
         file_paths["customers"] = customers_path
-        logger.info(
-            "Exported %d customers to %s", total_written, customers_path
-        )
+        logger.info("Exported %d customers to %s", total_written, customers_path)
 
         return file_paths
 

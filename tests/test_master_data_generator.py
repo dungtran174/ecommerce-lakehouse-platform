@@ -68,15 +68,13 @@ class TestMasterDataGenerator(unittest.TestCase):
 
     def test_export_to_csv(self) -> None:
         """Verify exporting master entities to CSV produces valid readable files."""
-        files = self.generator.export_to_csv(
-            output_dir=self.test_dir, brand_count=50
-        )
+        files = self.generator.export_to_csv(output_dir=self.test_dir, brand_count=50)
 
         self.assertIn("brands", files)
         self.assertIn("category", files)
         self.assertIn("payment_method", files)
 
-        for table, file_path in files.items():
+        for _table, file_path in files.items():
             self.assertTrue(os.path.exists(file_path))
             with open(file_path, "r", encoding="utf-8") as f:
                 reader = csv.reader(f)

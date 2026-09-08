@@ -40,9 +40,7 @@ PREDEFINED_CATEGORIES: list[dict[str, Any]] = [
     {
         "category_id": 3,
         "category_display_name": "Công cụ & Dụng cụ",
-        "category_description": (
-            "Dụng cụ sửa chữa, máy khoan, thiết bị kỹ thuật."
-        ),
+        "category_description": ("Dụng cụ sửa chữa, máy khoan, thiết bị kỹ thuật."),
     },
     {
         "category_id": 4,
@@ -54,9 +52,7 @@ PREDEFINED_CATEGORIES: list[dict[str, Any]] = [
     {
         "category_id": 5,
         "category_display_name": "Game & Giải trí",
-        "category_description": (
-            "Máy chơi game, đĩa game, phụ kiện và đồ sưu tầm."
-        ),
+        "category_description": ("Máy chơi game, đĩa game, phụ kiện và đồ sưu tầm."),
     },
     {
         "category_id": 6,
@@ -75,9 +71,7 @@ PREDEFINED_CATEGORIES: list[dict[str, Any]] = [
     {
         "category_id": 8,
         "category_display_name": "Sách & Văn phòng phẩm",
-        "category_description": (
-            "Sách học, truyện, dụng cụ học tập và đồ văn phòng."
-        ),
+        "category_description": ("Sách học, truyện, dụng cụ học tập và đồ văn phòng."),
     },
     {
         "category_id": 9,
@@ -96,16 +90,12 @@ PREDEFINED_CATEGORIES: list[dict[str, Any]] = [
     {
         "category_id": 11,
         "category_display_name": "Thực phẩm & Đồ uống",
-        "category_description": (
-            "Đồ ăn đóng gói, đồ uống, thực phẩm khô và tươi."
-        ),
+        "category_description": ("Đồ ăn đóng gói, đồ uống, thực phẩm khô và tươi."),
     },
     {
         "category_id": 12,
         "category_display_name": "Xe cộ & Phụ kiện",
-        "category_description": (
-            "Xe máy, xe hơi, và phụ tùng – phụ kiện đi kèm."
-        ),
+        "category_description": ("Xe máy, xe hơi, và phụ tùng – phụ kiện đi kèm."),
     },
     {
         "category_id": 13,
@@ -117,9 +107,7 @@ PREDEFINED_CATEGORIES: list[dict[str, Any]] = [
     {
         "category_id": 14,
         "category_display_name": "Vật nuôi & Thú cưng",
-        "category_description": (
-            "Đồ ăn, phụ kiện và sản phẩm chăm sóc thú cưng."
-        ),
+        "category_description": ("Đồ ăn, phụ kiện và sản phẩm chăm sóc thú cưng."),
     },
     {
         "category_id": 15,
@@ -136,9 +124,7 @@ PREDEFINED_CATEGORIES: list[dict[str, Any]] = [
     {
         "category_id": 17,
         "category_display_name": "Đồ chơi & Mẹ bé",
-        "category_description": (
-            "Đồ chơi trẻ em, tã bỉm, sản phẩm chăm sóc mẹ và bé."
-        ),
+        "category_description": ("Đồ chơi trẻ em, tã bỉm, sản phẩm chăm sóc mẹ và bé."),
     },
     {
         "category_id": 18,
@@ -452,9 +438,7 @@ class MasterDataGenerator:
             writer.writeheader()
             writer.writerows(payments)
         file_paths["payment_method"] = payments_path
-        logger.info(
-            "Exported %d payment methods to %s", len(payments), payments_path
-        )
+        logger.info("Exported %d payment methods to %s", len(payments), payments_path)
 
         return file_paths
 
