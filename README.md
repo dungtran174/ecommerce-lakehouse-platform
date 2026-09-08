@@ -197,6 +197,7 @@ make init-lakehouse
 ```bash
 make seed-data
 ```
+For custom volume profiles (`small`, `medium`, `full`) and database seeding options, see the [Data Generation Guide](docs/setup/data_generation.md).
 
 ### 5. Access Services
 - **Airflow Webserver:** `http://localhost:8080` (admin / admin)
