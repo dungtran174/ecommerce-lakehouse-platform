@@ -370,7 +370,7 @@ class ProductCustomerGenerator:
             # Represented as formatted decimal values (e.g. 350.00 to 45000.00)
             price_val = round(self.rng.uniform(150.0, 35000.0), 2)
 
-            created_delta = timedelta(days=self.rng.randint(0, 700))
+            created_delta = timedelta(days=self.rng.randint(0, 1000))
             created_at = base_date + created_delta
             updated_at = created_at + timedelta(days=self.rng.randint(0, 60))
 
@@ -439,7 +439,7 @@ class ProductCustomerGenerator:
 
             address = self.rng.choice(VIETNAMESE_PROVINCES)
 
-            created_delta = timedelta(days=self.rng.randint(0, 750))
+            created_delta = timedelta(days=self.rng.randint(0, 1100))
             created_at = base_date + created_delta
             updated_at = created_at + timedelta(days=self.rng.randint(0, 90))
 
