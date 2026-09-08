@@ -5,5 +5,6 @@ clickstream user activity logs.
 """
 
 from data_generators.db_connector import DatabaseConnector
+from data_generators.generate_master_data import MasterDataGenerator
 
-__all__ = ["DatabaseConnector"]
+__all__ = ["DatabaseConnector", "MasterDataGenerator"]
