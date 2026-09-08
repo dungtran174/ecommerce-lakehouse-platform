@@ -5,6 +5,7 @@ clickstream user activity logs.
 """
 
 from data_generators.db_connector import DatabaseConnector
+from data_generators.generate_clickstream_logs import ClickstreamGenerator
 from data_generators.generate_master_data import MasterDataGenerator
 from data_generators.generate_products_customers import ProductCustomerGenerator
 from data_generators.generate_transactions import TransactionGenerator
@@ -14,4 +15,5 @@ __all__ = [
     "MasterDataGenerator",
     "ProductCustomerGenerator",
     "TransactionGenerator",
+    "ClickstreamGenerator",
 ]
