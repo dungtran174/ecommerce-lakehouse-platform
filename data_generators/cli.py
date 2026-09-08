@@ -15,6 +15,7 @@ Provides presets:
 from __future__ import annotations
 
 import argparse
+import csv
 import logging
 import os
 import sys
@@ -87,8 +88,8 @@ def run_oltp_pipeline(
     master_files = master_gen.export_to_csv(
         output_dir=output_dir, brand_count=cfg["brands"]
     )
-    brands = master_gen.generate_brands(count=cfg["brands"])
-    brand_ids = [b["brand_id"] for b in brands]
+    with open(master_files["brands"], "r", encoding="utf-8") as f:
+        brand_ids = [r["brand_id"] for r in csv.DictReader(f)]
 
     # 2. Products and Customers
     logger.info(
@@ -102,11 +103,10 @@ def run_oltp_pipeline(
         product_count=cfg["products"],
         customer_count=cfg["customers"],
     )
-    products = prod_cust_gen.generate_products(
-        brand_ids=brand_ids, count=cfg["products"]
-    )
-    customers = prod_cust_gen.generate_customers(count=cfg["customers"])
-    customer_ids = [c["customer_id"] for c in customers]
+    with open(prod_cust_files["products"], "r", encoding="utf-8") as f:
+        products = list(csv.DictReader(f))
+    with open(prod_cust_files["customers"], "r", encoding="utf-8") as f:
+        customer_ids = [int(r["customer_id"]) for r in csv.DictReader(f)]
 
     # 3. Transactions
     logger.info("Generating orders (%d) and line items...", cfg["orders"])
