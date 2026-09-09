@@ -1,0 +1,13 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# Kubernetes Kustomization Manifest - Base Infrastructure
+# ==============================================================================
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: lakehouse
+
+resources:
+  - minio-statefulset.yaml
+  - minio-service.yaml
+  - ../ingress/minio-ingress.yaml

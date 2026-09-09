@@ -1,0 +1,41 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# Nginx Ingress Manifest for MinIO Object Store & Console
+# Routes hostnames: console.minio.lakehouse.local and s3.minio.lakehouse.local
+# ==============================================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: minio-ingress
+  namespace: lakehouse
+  labels:
+    app: minio
+    tier: storage
+    component: ingress
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+spec:
+  rules:
+    - host: console.minio.lakehouse.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: minio
+                port:
+                  number: 9001
+    - host: s3.minio.lakehouse.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: minio
+                port:
+                  number: 9000
