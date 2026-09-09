@@ -97,6 +97,29 @@ class TestDockerComposeConfig(unittest.TestCase):
         self.assertIn("init_minio.sh", content)
         self.assertIn("/init_minio.sh", content)
 
+    def test_hive_metastore_and_backend_service_configuration(self) -> None:
+        """Verify Hive Metastore and MySQL backend database configurations."""
+        with open(self.compose_file, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        # Metastore MySQL backend DB assertions
+        self.assertIn("metastore-db:", content)
+        self.assertIn("lakehouse-metastore-db", content)
+        self.assertIn("metastore_db_data:/var/lib/mysql", content)
+        self.assertIn("172.28.0.30", content)
+        self.assertIn("METASTORE_DB_PORT", content)
+
+        # Hive Metastore standalone container assertions
+        self.assertIn("hive-metastore:", content)
+        self.assertIn("lakehouse-hive-metastore", content)
+        self.assertIn("context: ./hive-metastore", content)
+        self.assertIn("image: lakehouse/hive-metastore:3.0.0", content)
+        self.assertIn("172.28.0.31", content)
+        self.assertIn("metastore.lakehouse.local", content)
+        self.assertIn("METASTORE_PORT", content)
+        self.assertIn("metastore-db:", content)
+        self.assertIn('"nc", "-z", "localhost", "9083"', content)
+
 
 if __name__ == "__main__":
     unittest.main()

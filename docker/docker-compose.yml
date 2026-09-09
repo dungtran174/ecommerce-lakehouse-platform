@@ -103,3 +103,74 @@ services:
     networks:
       lakehouse-net:
 
+  # ----------------------------------------------------------------------------
+  # Hive Metastore Backend Database: MySQL 8.0
+  # Stores relational schema metadata, partition descriptors, and column specs
+  # ----------------------------------------------------------------------------
+  metastore-db:
+    image: mysql:8.0
+    container_name: lakehouse-metastore-db
+    hostname: metastore-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${METASTORE_DB_PASSWORD:-hivepassword}
+      MYSQL_DATABASE: ${METASTORE_DB_NAME:-metastore_db}
+      MYSQL_USER: ${METASTORE_DB_USER:-hive}
+      MYSQL_PASSWORD: ${METASTORE_DB_PASSWORD:-hivepassword}
+    ports:
+      - "${METASTORE_DB_PORT:-3307}:3306"
+    volumes:
+      - metastore_db_data:/var/lib/mysql
+    networks:
+      lakehouse-net:
+        ipv4_address: 172.28.0.30
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$${METASTORE_DB_PASSWORD:-hivepassword}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ----------------------------------------------------------------------------
+  # Technical Catalog & Metadata Service: Apache Hive Metastore 3.0
+  # Exposes Thrift RPC on port 9083 for Delta Lake catalog operations
+  # ----------------------------------------------------------------------------
+  hive-metastore:
+    build:
+      context: ./hive-metastore
+      dockerfile: Dockerfile
+    image: lakehouse/hive-metastore:3.0.0
+    container_name: lakehouse-hive-metastore
+    hostname: hive-metastore
+    restart: unless-stopped
+    depends_on:
+      metastore-db:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      METASTORE_DB_HOST: metastore-db
+      METASTORE_DB_PORT: 3306
+      METASTORE_DB_NAME: ${METASTORE_DB_NAME:-metastore_db}
+      METASTORE_DB_USER: ${METASTORE_DB_USER:-hive}
+      METASTORE_DB_PASSWORD: ${METASTORE_DB_PASSWORD:-hivepassword}
+      MINIO_HOST: minio
+      MINIO_PORT: 9000
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_DEFAULT_BUCKET: ${MINIO_DEFAULT_BUCKET:-lakehouse}
+    ports:
+      - "${METASTORE_PORT:-9083}:9083"
+    networks:
+      lakehouse-net:
+        ipv4_address: 172.28.0.31
+        aliases:
+          - metastore.lakehouse.local
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "9083"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
+
+
