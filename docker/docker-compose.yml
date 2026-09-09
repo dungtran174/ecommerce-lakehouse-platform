@@ -1,0 +1,51 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# Infrastructure & Storage Services Docker Compose Stack
+# ==============================================================================
+
+version: "3.8"
+
+networks:
+  lakehouse-net:
+    name: lakehouse-net
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+volumes:
+  mysql_oltp_data:
+    name: lakehouse_mysql_oltp_data
+  minio_data:
+    name: lakehouse_minio_data
+  metastore_db_data:
+    name: lakehouse_metastore_db_data
+
+services:
+  # ----------------------------------------------------------------------------
+  # Source OLTP Database: MySQL 8.0
+  # Hosts transactional schema: customers, products, brands, orders, etc.
+  # ----------------------------------------------------------------------------
+  mysql-oltp:
+    image: mysql:8.0
+    container_name: lakehouse-mysql-oltp
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-ecommerce_oltp}
+      MYSQL_USER: ${MYSQL_USER:-lakehouse_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-lakehouse_password}
+    ports:
+      - "${MYSQL_OLTP_PORT:-3306}:3306"
+    volumes:
+      - mysql_oltp_data:/var/lib/mysql
+      - ../data_generators/schema_oltp.sql:/docker-entrypoint-initdb.d/01_schema_oltp.sql:ro
+    networks:
+      lakehouse-net:
+        ipv4_address: 172.28.0.10
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$${MYSQL_ROOT_PASSWORD:-rootpassword}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
