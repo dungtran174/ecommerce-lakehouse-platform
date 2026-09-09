@@ -10,4 +10,6 @@ namespace: lakehouse
 resources:
   - minio-statefulset.yaml
   - minio-service.yaml
+  - hive-metastore-deployment.yaml
+  - hive-metastore-service.yaml
   - ../ingress/minio-ingress.yaml

@@ -1,0 +1,76 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# Apache Hive Metastore 3.0 Kubernetes Deployment
+# Exposes Thrift metadata catalog on port 9083
+# ==============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hive-metastore
+  namespace: lakehouse
+  labels:
+    app: hive-metastore
+    tier: metadata
+    component: catalog
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hive-metastore
+  template:
+    metadata:
+      labels:
+        app: hive-metastore
+        tier: metadata
+        component: catalog
+    spec:
+      containers:
+        - name: hive-metastore
+          image: lakehouse/hive-metastore:3.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: thrift
+              containerPort: 9083
+              protocol: TCP
+          env:
+            - name: METASTORE_DB_HOST
+              value: metastore-db
+            - name: METASTORE_DB_PORT
+              value: "3306"
+            - name: METASTORE_DB_NAME
+              value: metastore_db
+            - name: METASTORE_DB_USER
+              value: hive
+            - name: METASTORE_DB_PASSWORD
+              value: hivepassword
+            - name: MINIO_HOST
+              value: minio
+            - name: MINIO_PORT
+              value: "9000"
+            - name: MINIO_ROOT_USER
+              value: minioadmin
+            - name: MINIO_ROOT_PASSWORD
+              value: minioadmin
+            - name: MINIO_DEFAULT_BUCKET
+              value: lakehouse
+          readinessProbe:
+            tcpSocket:
+              port: 9083
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            tcpSocket:
+              port: 9083
+            initialDelaySeconds: 45
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: 2000m
+              memory: 2Gi

@@ -1,0 +1,23 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# Apache Hive Metastore ClusterIP Service
+# Exposes Thrift RPC metadata endpoint on port 9083
+# ==============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: hive-metastore
+  namespace: lakehouse
+  labels:
+    app: hive-metastore
+    tier: metadata
+    component: catalog
+spec:
+  type: ClusterIP
+  selector:
+    app: hive-metastore
+  ports:
+    - name: thrift
+      port: 9083
+      targetPort: 9083
+      protocol: TCP
