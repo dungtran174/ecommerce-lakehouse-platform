@@ -94,10 +94,8 @@ class TestDockerComposeConfig(unittest.TestCase):
         self.assertIn("minio-create-buckets:", content)
         self.assertIn("image: minio/mc:latest", content)
         self.assertIn("lakehouse-minio-create-buckets", content)
-        self.assertIn("mc alias set", content)
-        self.assertIn("mc mb --ignore-existing", content)
-        for tier in ["bronze", "silver", "gold", "logs", "models", "checkpoints"]:
-            self.assertIn(tier, content, f"Storage tier {tier} must be provisioned")
+        self.assertIn("init_minio.sh", content)
+        self.assertIn("/init_minio.sh", content)
 
 
 if __name__ == "__main__":

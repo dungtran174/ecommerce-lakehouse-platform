@@ -84,7 +84,7 @@ services:
 
   # ----------------------------------------------------------------------------
   # MinIO Bucket Provisioner: MinIO Client (mc)
-  # Automatically ensures default bucket and multi-tier directory structure exist
+  # Automatically executes scripts/init_minio.sh to provision multi-tier buckets
   # ----------------------------------------------------------------------------
   minio-create-buckets:
     image: minio/mc:latest
@@ -93,25 +93,13 @@ services:
       minio:
         condition: service_healthy
     environment:
+      MINIO_ENDPOINT: http://minio:9000
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
       MINIO_DEFAULT_BUCKET: ${MINIO_DEFAULT_BUCKET:-lakehouse}
-    entrypoint: >
-      /bin/sh -c "
-      echo 'Waiting for MinIO server to accept connections...';
-      until (/usr/bin/mc alias set local http://minio:9000 $${MINIO_ROOT_USER:-minioadmin} $${MINIO_ROOT_PASSWORD:-minioadmin}); do
-        echo '...waiting for MinIO to initialize...';
-        sleep 1;
-      done;
-      echo 'Creating multi-tier buckets and prefixes...';
-      /usr/bin/mc mb --ignore-existing local/$${MINIO_DEFAULT_BUCKET:-lakehouse};
-      /usr/bin/mc anonymous set download local/$${MINIO_DEFAULT_BUCKET:-lakehouse};
-      for tier in bronze silver gold logs models checkpoints tmp; do
-        /usr/bin/mc pipe local/$${MINIO_DEFAULT_BUCKET:-lakehouse}/$${tier}/.keep < /dev/null 2>/dev/null || true;
-      done;
-      echo 'MinIO multi-tier buckets initialized successfully.';
-      exit 0;
-      "
+    volumes:
+      - ../scripts/init_minio.sh:/init_minio.sh:ro
+    entrypoint: ["/bin/sh", "/init_minio.sh"]
     networks:
       lakehouse-net:
 
