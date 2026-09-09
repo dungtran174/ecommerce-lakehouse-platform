@@ -49,3 +49,69 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+
+  # ----------------------------------------------------------------------------
+  # S3-Compatible Distributed Object Storage: MinIO
+  # Stores Lakehouse Bronze, Silver, Gold data tiers, logs, and ML artifacts
+  # ----------------------------------------------------------------------------
+  minio:
+    image: minio/minio:latest
+    container_name: lakehouse-minio
+    hostname: minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_PROMETHEUS_AUTH_TYPE: "public"
+      MINIO_BROWSER: "on"
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      lakehouse-net:
+        ipv4_address: 172.28.0.20
+        aliases:
+          - s3.lakehouse.local
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ----------------------------------------------------------------------------
+  # MinIO Bucket Provisioner: MinIO Client (mc)
+  # Automatically ensures default bucket and multi-tier directory structure exist
+  # ----------------------------------------------------------------------------
+  minio-create-buckets:
+    image: minio/mc:latest
+    container_name: lakehouse-minio-create-buckets
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_DEFAULT_BUCKET: ${MINIO_DEFAULT_BUCKET:-lakehouse}
+    entrypoint: >
+      /bin/sh -c "
+      echo 'Waiting for MinIO server to accept connections...';
+      until (/usr/bin/mc alias set local http://minio:9000 $${MINIO_ROOT_USER:-minioadmin} $${MINIO_ROOT_PASSWORD:-minioadmin}); do
+        echo '...waiting for MinIO to initialize...';
+        sleep 1;
+      done;
+      echo 'Creating multi-tier buckets and prefixes...';
+      /usr/bin/mc mb --ignore-existing local/$${MINIO_DEFAULT_BUCKET:-lakehouse};
+      /usr/bin/mc anonymous set download local/$${MINIO_DEFAULT_BUCKET:-lakehouse};
+      for tier in bronze silver gold logs models checkpoints tmp; do
+        /usr/bin/mc pipe local/$${MINIO_DEFAULT_BUCKET:-lakehouse}/$${tier}/.keep < /dev/null 2>/dev/null || true;
+      done;
+      echo 'MinIO multi-tier buckets initialized successfully.';
+      exit 0;
+      "
+    networks:
+      lakehouse-net:
+
