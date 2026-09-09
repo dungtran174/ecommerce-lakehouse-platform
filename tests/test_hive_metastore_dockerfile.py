@@ -58,7 +58,8 @@ class TestHiveMetastoreDockerfile(unittest.TestCase):
         self.assertIn("useradd -r -g hive", content)
         self.assertIn("USER hive", content)
         self.assertIn("EXPOSE 9083", content)
-        self.assertIn("start-metastore", content)
+        self.assertIn("entrypoint.sh", content)
+        self.assertIn("ENTRYPOINT", content)
 
 
 if __name__ == "__main__":

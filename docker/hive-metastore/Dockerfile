@@ -61,6 +61,11 @@ RUN cp ${HADOOP_HOME}/share/hadoop/tools/lib/hadoop-aws-${HADOOP_VERSION}.jar "$
 RUN rm -f "${HIVE_HOME}/lib/guava-19.0.jar" && \
     cp ${HADOOP_HOME}/share/hadoop/common/lib/guava-*.jar "${HIVE_HOME}/lib/"
 
+# Copy default metastore configuration and entrypoint script
+COPY conf/metastore-site.xml "${HIVE_HOME}/conf/metastore-site.xml"
+COPY entrypoint.sh "${HIVE_HOME}/bin/entrypoint.sh"
+RUN chmod +x "${HIVE_HOME}/bin/entrypoint.sh"
+
 # Create dedicated non-root hive user and group for container security
 RUN groupadd -r hive --gid=1000 && \
     useradd -r -g hive --uid=1000 -d ${HIVE_HOME} hive && \
@@ -72,5 +77,6 @@ EXPOSE 9083
 USER hive
 WORKDIR ${HIVE_HOME}
 
-# Default command to run standalone metastore
-CMD ["sh", "-c", "${HIVE_HOME}/bin/start-metastore"]
+# Container entrypoint initializes DB schema and starts metastore
+ENTRYPOINT ["/opt/hive/bin/entrypoint.sh"]
+

@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<!--
+   Modern E-Commerce Data Lakehouse Platform
+   Apache Hive Metastore 3.0 Configuration
+   Configured for MySQL Relational Catalog Backend and MinIO S3A Storage
+-->
+<configuration>
+    <!-- ==================================================================== -->
+    <!-- 1. Thrift Server & Warehouse Storage Settings                        -->
+    <!-- ==================================================================== -->
+    <property>
+        <name>metastore.thrift.uris</name>
+        <value>thrift://0.0.0.0:9083</value>
+        <description>Thrift URI for the remote Hive Metastore service</description>
+    </property>
+
+    <property>
+        <name>metastore.warehouse.dir</name>
+        <value>s3a://lakehouse/warehouse</value>
+        <description>Default location of the Hive Metastore warehouse tables on MinIO S3A</description>
+    </property>
+
+    <property>
+        <name>metastore.thrift.port</name>
+        <value>9083</value>
+        <description>Metastore Thrift listening port</description>
+    </property>
+
+    <!-- ==================================================================== -->
+    <!-- 2. Relational Database Backend Connection (MySQL 8.0)                -->
+    <!-- ==================================================================== -->
+    <property>
+        <name>javax.jdo.option.ConnectionDriverName</name>
+        <value>com.mysql.cj.jdbc.Driver</value>
+        <description>MySQL Connector/J JDBC driver class name</description>
+    </property>
+
+    <property>
+        <name>javax.jdo.option.ConnectionURL</name>
+        <value>jdbc:mysql://metastore-db:3306/metastore_db?createDatabaseIfNotExist=true&amp;useSSL=false&amp;allowPublicKeyRetrieval=true&amp;serverTimezone=UTC</value>
+        <description>JDBC URL for Hive Metastore MySQL backend</description>
+    </property>
+
+    <property>
+        <name>javax.jdo.option.ConnectionUserName</name>
+        <value>hive</value>
+        <description>Username for database connection</description>
+    </property>
+
+    <property>
+        <name>javax.jdo.option.ConnectionPassword</name>
+        <value>hivepassword</value>
+        <description>Password for database connection</description>
+    </property>
+
+    <!-- ==================================================================== -->
+    <!-- 3. Schema Verification & DataNucleus ORM Properties                  -->
+    <!-- ==================================================================== -->
+    <property>
+        <name>hive.metastore.schema.verification</name>
+        <value>false</value>
+        <description>Enforce metastore schema version checking against database</description>
+    </property>
+
+    <property>
+        <name>datanucleus.schema.autoCreateAll</name>
+        <value>true</value>
+        <description>Auto-create missing metadata tables and constraints in MySQL</description>
+    </property>
+
+    <property>
+        <name>datanucleus.schema.autoCreateTables</name>
+        <value>true</value>
+        <description>Auto-create missing tables in backend database</description>
+    </property>
+
+    <property>
+        <name>datanucleus.fixedDatastore</name>
+        <value>false</value>
+        <description>Allow DataNucleus to modify database schema</description>
+    </property>
+
+    <!-- ==================================================================== -->
+    <!-- 4. MinIO S3A FileSystem Connector Settings                           -->
+    <!-- ==================================================================== -->
+    <property>
+        <name>fs.s3a.impl</name>
+        <value>org.apache.hadoop.fs.s3a.S3AFileSystem</value>
+        <description>Hadoop S3A FileSystem implementation class</description>
+    </property>
+
+    <property>
+        <name>fs.s3a.endpoint</name>
+        <value>http://minio:9000</value>
+        <description>MinIO S3 API server endpoint URL</description>
+    </property>
+
+    <property>
+        <name>fs.s3a.access.key</name>
+        <value>minioadmin</value>
+        <description>AWS S3 access key ID / MinIO root user</description>
+    </property>
+
+    <property>
+        <name>fs.s3a.secret.key</name>
+        <value>minioadmin</value>
+        <description>AWS S3 secret access key / MinIO root password</description>
+    </property>
+
+    <property>
+        <name>fs.s3a.path.style.access</name>
+        <value>true</value>
+        <description>Enable path-style bucket access required by MinIO (http://endpoint/bucket)</description>
+    </property>
+
+    <property>
+        <name>fs.s3a.connection.ssl.enabled</name>
+        <value>false</value>
+        <description>Disable SSL for internal cluster HTTP communication with MinIO</description>
+    </property>
+
+    <property>
+        <name>fs.s3a.aws.credentials.provider</name>
+        <value>org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider</value>
+        <description>AWS static credential provider for access/secret key pairs</description>
+    </property>
+
+    <!-- ==================================================================== -->
+    <!-- 5. Metastore Operational & Event Listener Settings                   -->
+    <!-- ==================================================================== -->
+    <property>
+        <name>hive.metastore.event.db.listener.timetolive</name>
+        <value>86400s</value>
+        <description>Notification log retention in database for Spark/Trino change events</description>
+    </property>
+
+    <property>
+        <name>hive.metastore.execute.setugi</name>
+        <value>true</value>
+        <description>Execute client operations using user group information</description>
+    </property>
+</configuration>
