@@ -173,4 +173,41 @@ services:
       retries: 5
       start_period: 45s
 
+  # ----------------------------------------------------------------------------
+  # Distributed Compute Engine: Apache Spark 3.3 Thrift Server
+  # Serves JDBC/ODBC on port 10000 and Spark Application Web UI on port 4040
+  # ----------------------------------------------------------------------------
+  spark-thrift-server:
+    build:
+      context: ./spark
+      dockerfile: Dockerfile
+    image: lakehouse/spark-thrift-server:3.3.3
+    container_name: lakehouse-spark-thrift-server
+    hostname: spark-thrift-server
+    restart: unless-stopped
+    depends_on:
+      hive-metastore:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      SPARK_DRIVER_MEMORY: ${SPARK_DRIVER_MEMORY:-2g}
+      SPARK_EXECUTOR_MEMORY: ${SPARK_EXECUTOR_MEMORY:-2g}
+      SPARK_LOCAL_IP: 172.28.0.40
+    ports:
+      - "${SPARK_THRIFT_PORT:-10000}:10000"
+      - "${SPARK_UI_PORT:-4040}:4040"
+    networks:
+      lakehouse-net:
+        ipv4_address: 172.28.0.40
+        aliases:
+          - spark.lakehouse.local
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4040"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+
 

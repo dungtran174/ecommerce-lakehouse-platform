@@ -120,6 +120,22 @@ class TestDockerComposeConfig(unittest.TestCase):
         self.assertIn("metastore-db:", content)
         self.assertIn('"nc", "-z", "localhost", "9083"', content)
 
+    def test_spark_thrift_server_service_configuration(self) -> None:
+        """Verify Apache Spark 3.3 Thrift Server container and network settings."""
+        with open(self.compose_file, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        self.assertIn("spark-thrift-server:", content)
+        self.assertIn("lakehouse-spark-thrift-server", content)
+        self.assertIn("context: ./spark", content)
+        self.assertIn("image: lakehouse/spark-thrift-server:3.3.3", content)
+        self.assertIn("172.28.0.40", content)
+        self.assertIn("spark.lakehouse.local", content)
+        self.assertIn("SPARK_THRIFT_PORT", content)
+        self.assertIn("SPARK_UI_PORT", content)
+        self.assertIn("hive-metastore:", content)
+        self.assertIn("http://localhost:4040", content)
+
 
 if __name__ == "__main__":
     unittest.main()
