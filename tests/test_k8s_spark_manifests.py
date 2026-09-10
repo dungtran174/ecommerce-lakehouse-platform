@@ -16,6 +16,7 @@ class TestK8sSparkManifests(unittest.TestCase):
         """Locate Kubernetes manifest file paths."""
         cls.root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
         cls.k8s_base_dir = os.path.join(cls.root_dir, "k8s", "base")
+        cls.k8s_ingress_dir = os.path.join(cls.root_dir, "k8s", "ingress")
 
         cls.deployment_file = os.path.join(
             cls.k8s_base_dir, "spark-thrift-deployment.yaml"
@@ -24,6 +25,7 @@ class TestK8sSparkManifests(unittest.TestCase):
         cls.executor_template_file = os.path.join(
             cls.k8s_base_dir, "spark-executor-pod-template.yaml"
         )
+        cls.ingress_file = os.path.join(cls.k8s_ingress_dir, "spark-ui-ingress.yaml")
         cls.kustomization_file = os.path.join(cls.k8s_base_dir, "kustomization.yaml")
 
     def test_manifest_files_exist(self) -> None:
@@ -39,6 +41,10 @@ class TestK8sSparkManifests(unittest.TestCase):
         self.assertTrue(
             os.path.exists(self.executor_template_file),
             "spark-executor-pod-template.yaml must exist",
+        )
+        self.assertTrue(
+            os.path.exists(self.ingress_file),
+            "spark-ui-ingress.yaml must exist",
         )
         self.assertTrue(
             os.path.exists(self.kustomization_file),
@@ -189,6 +195,38 @@ class TestK8sSparkManifests(unittest.TestCase):
         self.assertIn("spark-thrift-deployment.yaml", resources)
         self.assertIn("spark-thrift-service.yaml", resources)
         self.assertIn("spark-executor-pod-template.yaml", resources)
+        self.assertIn("../ingress/spark-ui-ingress.yaml", resources)
+
+    def test_spark_ui_ingress_routing_and_annotations(self) -> None:
+        """Verify Spark UI Ingress host rules, annotations, and service mapping."""
+        with open(self.ingress_file, "r", encoding="utf-8") as f:
+            doc = yaml.safe_load(f)
+
+        self.assertEqual(doc.get("kind"), "Ingress")
+        self.assertEqual(doc.get("metadata", {}).get("name"), "spark-ui-ingress")
+        self.assertEqual(doc.get("metadata", {}).get("namespace"), "lakehouse")
+
+        annotations = doc.get("metadata", {}).get("annotations", {})
+        self.assertEqual(annotations.get("kubernetes.io/ingress.class"), "nginx")
+        self.assertEqual(
+            annotations.get("nginx.ingress.kubernetes.io/proxy-buffering"), "off"
+        )
+
+        rules = doc.get("spec", {}).get("rules", [])
+        self.assertTrue(len(rules) >= 2)
+        hosts = {r.get("host"): r for r in rules}
+        self.assertIn("spark.lakehouse.local", hosts)
+        self.assertIn("spark-ui.lakehouse.local", hosts)
+
+        for host_rule in (
+            hosts["spark.lakehouse.local"],
+            hosts["spark-ui.lakehouse.local"],
+        ):
+            paths = host_rule.get("http", {}).get("paths", [])
+            self.assertTrue(len(paths) >= 1)
+            backend_svc = paths[0].get("backend", {}).get("service", {})
+            self.assertEqual(backend_svc.get("name"), "spark-thrift-server")
+            self.assertEqual(backend_svc.get("port", {}).get("number"), 4040)
 
 
 if __name__ == "__main__":

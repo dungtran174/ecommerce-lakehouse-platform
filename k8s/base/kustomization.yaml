@@ -16,3 +16,4 @@ resources:
   - spark-thrift-service.yaml
   - spark-executor-pod-template.yaml
   - ../ingress/minio-ingress.yaml
+  - ../ingress/spark-ui-ingress.yaml

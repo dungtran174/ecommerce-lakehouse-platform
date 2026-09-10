@@ -1,0 +1,41 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# Nginx Ingress Manifest for Apache Spark Application & Thrift Server Web UI
+# Routes hostnames: spark.lakehouse.local and spark-ui.lakehouse.local
+# ==============================================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: spark-ui-ingress
+  namespace: lakehouse
+  labels:
+    app: spark-thrift-server
+    tier: compute
+    component: ingress
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+spec:
+  rules:
+    - host: spark.lakehouse.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: spark-thrift-server
+                port:
+                  number: 4040
+    - host: spark-ui.lakehouse.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: spark-thrift-server
+                port:
+                  number: 4040
