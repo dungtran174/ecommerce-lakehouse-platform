@@ -12,4 +12,7 @@ resources:
   - minio-service.yaml
   - hive-metastore-deployment.yaml
   - hive-metastore-service.yaml
+  - spark-thrift-deployment.yaml
+  - spark-thrift-service.yaml
+  - spark-executor-pod-template.yaml
   - ../ingress/minio-ingress.yaml

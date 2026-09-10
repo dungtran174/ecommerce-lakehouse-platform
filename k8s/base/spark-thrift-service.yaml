@@ -1,0 +1,27 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# Apache Spark Thrift Server ClusterIP Service
+# Exposes Thrift JDBC port (10000) and Web UI port (4040)
+# ==============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: spark-thrift-server
+  namespace: lakehouse
+  labels:
+    app: spark-thrift-server
+    tier: compute
+    component: query-engine
+spec:
+  type: ClusterIP
+  selector:
+    app: spark-thrift-server
+  ports:
+    - name: thrift
+      port: 10000
+      targetPort: 10000
+      protocol: TCP
+    - name: web-ui
+      port: 4040
+      targetPort: 4040
+      protocol: TCP

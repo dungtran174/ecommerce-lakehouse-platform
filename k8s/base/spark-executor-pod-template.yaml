@@ -1,0 +1,39 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# Apache Spark Executor Pod Template ConfigMap
+# Defines pod spec for dynamically allocated Spark executor pods on Kubernetes
+# ==============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: spark-executor-pod-template
+  namespace: lakehouse
+  labels:
+    app: spark-thrift-server
+    tier: compute
+    component: executor-template
+data:
+  executor-pod-template.yaml: |
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      labels:
+        app: spark-executor
+        tier: compute
+        component: worker
+    spec:
+      containers:
+        - name: spark-kubernetes-executor
+          image: lakehouse/spark-thrift-server:3.3.3
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: 1000m
+              memory: 2Gi
+            limits:
+              cpu: 2000m
+              memory: 4Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsUser: 185
+      restartPolicy: Never
