@@ -59,6 +59,8 @@ class TestSparkDockerfile(unittest.TestCase):
         self.assertIn("EXPOSE 10000 4040", content)
         self.assertIn("USER 185", content)
         self.assertIn("start-thriftserver.sh", content)
+        self.assertIn("COPY conf/spark-defaults.conf", content)
+        self.assertIn("COPY conf/hive-site.xml", content)
 
 
 if __name__ == "__main__":

@@ -39,8 +39,12 @@ RUN curl -fSL "https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/${HAD
 RUN curl -fSL "https://repo1.maven.org/maven2/com/mysql/mysql-connector-j/8.0.33/mysql-connector-j-8.0.33.jar" \
         -o "${SPARK_HOME}/jars/mysql-connector-j-8.0.33.jar"
 
+# Copy Spark configuration and Hive Metastore client configs
+COPY conf/spark-defaults.conf "${SPARK_HOME}/conf/spark-defaults.conf"
+COPY conf/hive-site.xml "${SPARK_HOME}/conf/hive-site.xml"
+
 # Set permissions for the default spark user (UID 185)
-RUN chown -R 185:185 "${SPARK_HOME}/jars"
+RUN chown -R 185:185 "${SPARK_HOME}/jars" "${SPARK_HOME}/conf"
 
 # Expose Spark Thrift Server JDBC port (10000) and Web UI port (4040)
 EXPOSE 10000 4040
@@ -50,3 +54,4 @@ USER 185
 
 # Default command launches Spark Thrift Server
 CMD ["/opt/spark/sbin/start-thriftserver.sh"]
+

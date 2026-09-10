@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<!--
+   Modern E-Commerce Data Lakehouse Platform
+   Apache Spark Client Hive Configuration (hive-site.xml)
+   Routes catalog operations to remote Hive Metastore and MinIO S3A
+-->
+<configuration>
+    <!-- Remote Hive Metastore Thrift URIs -->
+    <property>
+        <name>hive.metastore.uris</name>
+        <value>thrift://hive-metastore:9083</value>
+        <description>Thrift URI for remote Apache Hive Metastore service</description>
+    </property>
+
+    <!-- Lakehouse S3A Warehouse Location -->
+    <property>
+        <name>hive.metastore.warehouse.dir</name>
+        <value>s3a://lakehouse/warehouse</value>
+        <description>Default location of database and table data in MinIO</description>
+    </property>
+
+    <!-- Schema Verification -->
+    <property>
+        <name>hive.metastore.schema.verification</name>
+        <value>false</value>
+    </property>
+
+    <property>
+        <name>datanucleus.schema.autoCreateAll</name>
+        <value>true</value>
+    </property>
+
+    <!-- S3A MinIO Storage Access Configuration -->
+    <property>
+        <name>fs.s3a.impl</name>
+        <value>org.apache.hadoop.fs.s3a.S3AFileSystem</value>
+    </property>
+
+    <property>
+        <name>fs.s3a.endpoint</name>
+        <value>http://minio:9000</value>
+    </property>
+
+    <property>
+        <name>fs.s3a.access.key</name>
+        <value>minioadmin</value>
+    </property>
+
+    <property>
+        <name>fs.s3a.secret.key</name>
+        <value>minioadmin</value>
+    </property>
+
+    <property>
+        <name>fs.s3a.path.style.access</name>
+        <value>true</value>
+    </property>
+
+    <property>
+        <name>fs.s3a.connection.ssl.enabled</name>
+        <value>false</value>
+    </property>
+
+    <property>
+        <name>fs.s3a.aws.credentials.provider</name>
+        <value>org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider</value>
+    </property>
+</configuration>
