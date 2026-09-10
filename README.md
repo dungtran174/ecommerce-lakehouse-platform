@@ -202,9 +202,19 @@ For custom volume profiles (`small`, `medium`, `full`) and database seeding opti
 ### 5. Access Services
 - **Airflow Webserver:** `http://localhost:8080` (admin / admin)
 - **MinIO Console:** `http://localhost:9001` (minioadmin / minioadmin)
+- **Spark Thrift Server (JDBC/ODBC):** `localhost:10000` (`jdbc:hive2://localhost:10000/default`)
+- **Spark Web UI:** `http://localhost:4040` (`spark.lakehouse.local`)
 - **Trino Web UI:** `http://localhost:8085`
 - **Metabase:** `http://localhost:3000`
 - **CloudBeaver:** `http://localhost:8978`
+
+### 6. Verify Infrastructure Connectivity
+Run the automated verification suite to validate Spark Thrift Server connectivity, Hive Metastore catalog integration, and Delta Lake S3A I/O on MinIO:
+```bash
+python scripts/verify_spark_thrift.py
+```
+
+For complete deployment specifications on Docker Compose and Kubernetes, refer to the [Storage & Compute Infrastructure Guide](docs/setup/infrastructure.md).
 
 ---
 
