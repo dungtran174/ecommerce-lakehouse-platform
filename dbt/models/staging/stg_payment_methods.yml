@@ -1,0 +1,36 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# dbt Staging Model Documentation & Schema Assertions: stg_payment_methods
+# ==============================================================================
+
+version: 2
+
+models:
+  - name: stg_payment_methods
+    description: >
+      Staging view for payment methods, digital wallets, gateways, and transaction types.
+      Casts integer keys, trims display labels and classification providers, and attaches ingestion metadata.
+    columns:
+      - name: payment_method_id
+        description: "Primary key identifier for the payment channel."
+        tests:
+          - unique
+          - not_null
+
+      - name: display_name
+        description: "Customer-facing payment option label (Momo, ZaloPay, ShopeePay, COD, etc.)."
+        tests:
+          - not_null
+
+      - name: type
+        description: "Payment channel category (E-Wallet, Credit/Debit Card, Cash, Bank Transfer)."
+        tests:
+          - not_null
+
+      - name: provider
+        description: "Payment gateway service provider or operating institution."
+
+      - name: _ingested_at
+        description: "Metadata timestamp when the record was processed by dbt."
+        tests:
+          - not_null

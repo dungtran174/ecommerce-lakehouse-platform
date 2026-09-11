@@ -1,0 +1,31 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# dbt Staging Model Documentation & Schema Assertions: stg_brands
+# ==============================================================================
+
+version: 2
+
+models:
+  - name: stg_brands
+    description: >
+      Staging view for commercial brands master snapshot. Cleanses alphanumeric brand identifiers,
+      trims brand names and country origins, and attaches ingestion audit timestamps.
+    columns:
+      - name: brand_id
+        description: "Primary alphanumeric key for the commercial brand."
+        tests:
+          - unique
+          - not_null
+
+      - name: brand_name
+        description: "Registered trademark name of the brand."
+        tests:
+          - not_null
+
+      - name: brand_origin
+        description: "Country or geographic region where brand was founded."
+
+      - name: _ingested_at
+        description: "Metadata timestamp when the record was processed by dbt."
+        tests:
+          - not_null

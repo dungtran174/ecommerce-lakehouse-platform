@@ -1,0 +1,31 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# dbt Staging Model Documentation & Schema Assertions: stg_categories
+# ==============================================================================
+
+version: 2
+
+models:
+  - name: stg_categories
+    description: >
+      Staging view for product merchandise categories. Casts integer identifiers, cleanses
+      display names and category descriptions, and appends ingestion metadata.
+    columns:
+      - name: category_id
+        description: "Primary key identifier for the merchandise category."
+        tests:
+          - unique
+          - not_null
+
+      - name: category_display_name
+        description: "Customer-facing category name displayed in applications."
+        tests:
+          - not_null
+
+      - name: category_description
+        description: "Detailed description of product classifications within category."
+
+      - name: _ingested_at
+        description: "Metadata timestamp when the record was processed by dbt."
+        tests:
+          - not_null
