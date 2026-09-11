@@ -1,0 +1,67 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# dbt Gold Model Documentation & Schema Assertions: fact_order
+# ==============================================================================
+
+version: 2
+
+models:
+  - name: fact_order
+    description: >
+      Order-level grain fact table capturing gross sales, order discounts,
+      net revenue, and total items ordered in the Kimball Galaxy Schema.
+    columns:
+      - name: order_id
+        description: "Primary key identifier for the order."
+        tests:
+          - unique
+          - not_null
+
+      - name: customer_key
+        description: "Foreign key referencing dim_customer."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_customer')
+              field: customer_id
+
+      - name: payment_method_key
+        description: "Foreign key referencing dim_payment_method."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_payment_method')
+              field: payment_method_id
+
+      - name: date_key
+        description: "Foreign key referencing dim_date in YYYYMMDD format."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_date')
+              field: date_key
+
+      - name: quantity
+        description: "Total count of item units ordered in this transaction."
+        tests:
+          - not_null
+
+      - name: price
+        description: "Gross total order price before discounts."
+        tests:
+          - not_null
+
+      - name: discount_amt
+        description: "Cumulative order-level discount amount applied."
+        tests:
+          - not_null
+
+      - name: sub_total
+        description: "Net order revenue after discounts (price - discount_amt)."
+        tests:
+          - not_null
+
+      - name: _created_at
+        description: "Timestamp when the fact record was generated in Gold layer."
+        tests:
+          - not_null
