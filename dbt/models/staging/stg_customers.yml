@@ -1,0 +1,58 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# dbt Staging Model Documentation & Schema Assertions: stg_customers
+# ==============================================================================
+
+version: 2
+
+models:
+  - name: stg_customers
+    description: >
+      Staging view for raw MySQL customers snapshot. Cleanses and casts raw data types,
+      normalizes email strings to lowercase, trims text fields, and appends ingestion metadata.
+    columns:
+      - name: customer_id
+        description: "Primary key identifier for the customer."
+        tests:
+          - unique
+          - not_null
+
+      - name: first_name
+        description: "Cleansed first name."
+        tests:
+          - not_null
+
+      - name: last_name
+        description: "Cleansed last name / surname."
+        tests:
+          - not_null
+
+      - name: email
+        description: "Sanitized lowercase contact email address (PII)."
+
+      - name: phone_number
+        description: "Sanitized mobile contact phone number (PII)."
+
+      - name: gender
+        description: "Customer gender classification (Nam, Nu, Other)."
+
+      - name: tire
+        description: "Customer loyalty tier (bronze, silver, gold, platinum)."
+        tests:
+          - not_null
+
+      - name: address
+        description: "Shipping city, province, or territory in Vietnam."
+
+      - name: created_at
+        description: "UTC timestamp when the customer account was created."
+        tests:
+          - not_null
+
+      - name: updated_at
+        description: "UTC timestamp when the customer profile was last updated."
+
+      - name: _ingested_at
+        description: "Metadata timestamp when the record was processed by dbt."
+        tests:
+          - not_null
