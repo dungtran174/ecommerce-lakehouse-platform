@@ -1,0 +1,29 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# dbt Connection Profiles (dbt-spark Thrift method)
+# ==============================================================================
+
+ecommerce_lakehouse:
+  target: dev
+  outputs:
+    dev:
+      type: spark
+      method: thrift
+      host: "{{ env_var('SPARK_THRIFT_HOST', 'localhost') }}"
+      port: 10000
+      user: "{{ env_var('SPARK_THRIFT_USER', 'spark') }}"
+      schema: "{{ env_var('SPARK_THRIFT_SCHEMA', 'default') }}"
+      connect_retries: 5
+      connect_timeout: 60
+      threads: 4
+
+    prod:
+      type: spark
+      method: thrift
+      host: "{{ env_var('SPARK_THRIFT_HOST', 'spark-thrift-server') }}"
+      port: 10000
+      user: "{{ env_var('SPARK_THRIFT_USER', 'spark') }}"
+      schema: "{{ env_var('SPARK_THRIFT_SCHEMA', 'default') }}"
+      connect_retries: 5
+      connect_timeout: 120
+      threads: 8

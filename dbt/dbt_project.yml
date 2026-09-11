@@ -1,0 +1,56 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# dbt-spark Project Configuration
+# ==============================================================================
+
+name: "ecommerce_lakehouse"
+version: "1.0.0"
+config-version: 2
+
+# Profile mapping to profiles.yml
+profile: "ecommerce_lakehouse"
+
+# Directory paths configuration
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+# Clean targets removed on `dbt clean`
+clean-targets:
+  - "target"
+  - "dbt_packages"
+  - "logs"
+
+# Model configurations & Medallion layers
+models:
+  ecommerce_lakehouse:
+    # Staging Layer (Bronze to Staging Views)
+    staging:
+      +materialized: view
+      +schema: staging
+      +tags: ["staging", "bronze"]
+
+    # Silver Layer (Conformed & Cleansed Delta Lake Tables)
+    silver:
+      +materialized: table
+      +file_format: delta
+      +schema: silver
+      +tags: ["silver", "delta"]
+
+    # Gold Layer (Dimensional Sale Marts & Feature Stores)
+    gold:
+      +materialized: table
+      +file_format: delta
+      +tags: ["gold", "delta"]
+      sale_mart:
+        +schema: sale_mart
+        +tags: ["sale_mart", "bi"]
+      ml:
+        +schema: ml
+        +tags: ["ml", "features"]
+      marketing:
+        +schema: marketing
+        +tags: ["marketing", "campaigns"]

@@ -1,0 +1,8 @@
+.git/
+*.pyc
+__pycache__/
+.DS_Store
+*.swp
+target/
+dbt_packages/
+logs/
