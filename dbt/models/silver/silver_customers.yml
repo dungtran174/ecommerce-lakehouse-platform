@@ -1,0 +1,65 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# dbt Silver Model Documentation & Schema Assertions: silver_customers
+# ==============================================================================
+
+version: 2
+
+models:
+  - name: silver_customers
+    description: >
+      Conformed Silver Delta Lake table storing sanitized customer demographic profiles.
+      Deduplicates raw customer snapshot records by customer_id (keeping the latest update),
+      standardizes email addresses to lowercase, normalizes Vietnamese mobile phone numbers,
+      maps gender and loyalty tiers (bronze, silver, gold, platinum), and writes ACID Delta tables.
+    columns:
+      - name: customer_id
+        description: "Surrogate primary key identifying the customer."
+        tests:
+          - unique
+          - not_null
+
+      - name: first_name
+        description: "Cleansed first name."
+        tests:
+          - not_null
+
+      - name: last_name
+        description: "Cleansed last name / surname."
+        tests:
+          - not_null
+
+      - name: email
+        description: "Sanitized lowercase email address."
+
+      - name: phone_number
+        description: "Sanitized numeric phone number string without formatting noise."
+
+      - name: gender
+        description: "Normalized gender classification (Nam, Nu, Other)."
+        tests:
+          - accepted_values:
+              values: ["Nam", "Nu", "Other"]
+
+      - name: tire
+        description: "Conformed customer loyalty tier."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["bronze", "silver", "gold", "platinum"]
+
+      - name: address
+        description: "Shipping city, province, or territory in Vietnam."
+
+      - name: created_at
+        description: "Timestamp when the customer registered their account."
+        tests:
+          - not_null
+
+      - name: updated_at
+        description: "Timestamp when the profile was last modified."
+
+      - name: _transformed_at
+        description: "Timestamp when the record was processed into the Silver Delta Lake layer."
+        tests:
+          - not_null
