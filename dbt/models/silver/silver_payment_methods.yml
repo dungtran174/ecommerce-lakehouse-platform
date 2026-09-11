@@ -1,0 +1,37 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# dbt Silver Model Documentation & Schema Assertions: silver_payment_methods
+# ==============================================================================
+
+version: 2
+
+models:
+  - name: silver_payment_methods
+    description: >
+      Conformed Silver Delta Lake table storing standardized payment channels and gateways.
+      Deduplicates payment method records by payment_method_id, normalizes channel types,
+      and writes ACID Delta tables.
+    columns:
+      - name: payment_method_id
+        description: "Primary key integer identifier for the payment channel."
+        tests:
+          - unique
+          - not_null
+
+      - name: display_name
+        description: "Standardized customer-facing payment label."
+        tests:
+          - not_null
+
+      - name: type
+        description: "Payment channel category (E-Wallet, Credit/Debit Card, Cash, Bank Transfer)."
+        tests:
+          - not_null
+
+      - name: provider
+        description: "Payment gateway service provider or operating financial institution."
+
+      - name: _transformed_at
+        description: "Timestamp when the record was processed into the Silver Delta Lake layer."
+        tests:
+          - not_null

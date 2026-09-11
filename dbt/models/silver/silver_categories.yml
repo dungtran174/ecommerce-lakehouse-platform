@@ -1,0 +1,32 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# dbt Silver Model Documentation & Schema Assertions: silver_categories
+# ==============================================================================
+
+version: 2
+
+models:
+  - name: silver_categories
+    description: >
+      Conformed Silver Delta Lake table storing standardized product categories hierarchy.
+      Deduplicates category records by category_id, trims display labels and descriptions,
+      and writes ACID Delta tables.
+    columns:
+      - name: category_id
+        description: "Primary key integer identifier for the merchandise category."
+        tests:
+          - unique
+          - not_null
+
+      - name: category_display_name
+        description: "Cleaned customer-facing category title."
+        tests:
+          - not_null
+
+      - name: category_description
+        description: "Cleaned descriptive summary of product types within this category."
+
+      - name: _transformed_at
+        description: "Timestamp when the record was processed into the Silver Delta Lake layer."
+        tests:
+          - not_null
