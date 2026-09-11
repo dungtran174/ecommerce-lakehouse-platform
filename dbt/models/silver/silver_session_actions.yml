@@ -1,0 +1,115 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# dbt Silver Model Documentation & Schema Assertions: silver_session_actions
+# ==============================================================================
+
+version: 2
+
+models:
+  - name: silver_session_actions
+    description: >
+      Conformed Silver Delta Lake table recording exploded 1-to-many user action events.
+      Unnests JSON action arrays, standardizes timestamps, computes action type indicator flags,
+      links to user sessions, partitions by year/month/day, and writes ACID Delta tables.
+    columns:
+      - name: action_id
+        description: "Surrogate primary key identifier for the individual micro-action."
+        tests:
+          - unique
+          - not_null
+
+      - name: session_id
+        description: "Foreign key reference to silver_user_sessions.session_id."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('silver_user_sessions')
+              field: session_id
+
+      - name: action_timestamp
+        description: "Exact UTC event timestamp of the micro-action."
+        tests:
+          - not_null
+
+      - name: action_type
+        description: "Category of interaction (view, click, search, add_to_cart, purchase, checkout_view)."
+        tests:
+          - not_null
+
+      - name: product_id
+        description: "Interacted SKU identifier (nullable for search/generic actions)."
+
+      - name: search_term
+        description: "Search keyword query if action_type is search."
+
+      - name: order_id
+        description: "Associated order ID if action_type is purchase."
+
+      - name: revenue
+        description: "Transaction value generated if action_type is purchase."
+
+      - name: product_price
+        description: "Listing price of interacted SKU."
+
+      - name: product_category
+        description: "Merchandise category label of interacted SKU."
+
+      - name: is_view
+        description: "Binary flag (1/0) indicating page or product view event."
+        tests:
+          - not_null
+
+      - name: is_add_to_cart
+        description: "Binary flag (1/0) indicating add-to-cart conversion event."
+        tests:
+          - not_null
+
+      - name: is_purchase
+        description: "Binary flag (1/0) indicating checkout purchase conversion event."
+        tests:
+          - not_null
+
+      - name: is_search
+        description: "Binary flag (1/0) indicating search query execution."
+        tests:
+          - not_null
+
+      - name: is_wishlist
+        description: "Binary flag (1/0) indicating item saved to wishlist."
+        tests:
+          - not_null
+
+      - name: is_review
+        description: "Binary flag (1/0) indicating customer product review."
+        tests:
+          - not_null
+
+      - name: is_remove_from_cart
+        description: "Binary flag (1/0) indicating item removed from cart."
+        tests:
+          - not_null
+
+      - name: is_checkout_view
+        description: "Binary flag (1/0) indicating visit to checkout page."
+        tests:
+          - not_null
+
+      - name: year
+        description: "Partitioning year extracted from event timestamp."
+        tests:
+          - not_null
+
+      - name: month
+        description: "Partitioning month extracted from event timestamp."
+        tests:
+          - not_null
+
+      - name: day
+        description: "Partitioning day extracted from event timestamp."
+        tests:
+          - not_null
+
+      - name: _transformed_at
+        description: "Timestamp when the record was processed into the Silver Delta Lake layer."
+        tests:
+          - not_null

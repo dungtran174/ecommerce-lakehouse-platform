@@ -1,0 +1,117 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# dbt Silver Model Documentation & Schema Assertions: silver_user_sessions
+# ==============================================================================
+
+version: 2
+
+models:
+  - name: silver_user_sessions
+    description: >
+      Conformed Silver Delta Lake table recording cleansed user browsing sessions.
+      Flattens telemetry, geographic locations, and engagement aggregates, deduplicates
+      sessions on session_id, partitions data by year/month/day, and writes ACID Delta tables.
+    columns:
+      - name: session_id
+        description: "Primary key identifier for the user browsing session."
+        tests:
+          - unique
+          - not_null
+
+      - name: user_id
+        description: "Authenticated customer ID (nullable for anonymous visitors)."
+
+      - name: timestamp
+        description: "Session initiation UTC timestamp."
+        tests:
+          - not_null
+
+      - name: device_type
+        description: "Device category (desktop, mobile, tablet)."
+
+      - name: device_os
+        description: "Operating system."
+
+      - name: browser
+        description: "Web browser application."
+
+      - name: city
+        description: "User geographic city / province."
+
+      - name: country
+        description: "User country code."
+
+      - name: latitude
+        description: "Geographic latitude coordinate."
+
+      - name: longitude
+        description: "Geographic longitude coordinate."
+
+      - name: duration_seconds
+        description: "Total active session duration in seconds."
+        tests:
+          - not_null
+
+      - name: page_views
+        description: "Total page views accumulated during session."
+        tests:
+          - not_null
+
+      - name: actions_count
+        description: "Total count of user micro-actions in session."
+        tests:
+          - not_null
+
+      - name: has_purchase
+        description: "Indicator flag whether session converted to purchase."
+        tests:
+          - not_null
+
+      - name: revenue
+        description: "Total monetary transaction value generated in session."
+        tests:
+          - not_null
+
+      - name: user_segment
+        description: "Behavioral cohort classification (new, returning, loyal, churn_risk)."
+
+      - name: referrer
+        description: "Inbound referring URL."
+
+      - name: referrer_type
+        description: "Referrer attribution category."
+
+      - name: utm_source
+        description: "Marketing campaign source parameter."
+
+      - name: utm_campaign
+        description: "Marketing campaign identifier."
+
+      - name: is_mobile
+        description: "Mobile client boolean flag."
+
+      - name: language
+        description: "Browser locale language setting."
+
+      - name: ab_test
+        description: "A/B test cohort bucket."
+
+      - name: year
+        description: "Partitioning year extracted from session timestamp."
+        tests:
+          - not_null
+
+      - name: month
+        description: "Partitioning month extracted from session timestamp."
+        tests:
+          - not_null
+
+      - name: day
+        description: "Partitioning day extracted from session timestamp."
+        tests:
+          - not_null
+
+      - name: _transformed_at
+        description: "Timestamp when the record was processed into the Silver Delta Lake layer."
+        tests:
+          - not_null
