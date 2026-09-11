@@ -1,0 +1,55 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# dbt Staging Model Documentation & Schema Assertions: stg_products
+# ==============================================================================
+
+version: 2
+
+models:
+  - name: stg_products
+    description: >
+      Staging view for raw MySQL products catalog snapshot. Standardizes SKU identifiers,
+      casts prices to numeric floating point values, cleanses titles and descriptions,
+      validates category and brand keys, and attaches ingestion audit metadata.
+    columns:
+      - name: product_id
+        description: "Primary key SKU identifier for the product."
+        tests:
+          - unique
+          - not_null
+
+      - name: product_name
+        description: "Commercial title / name of the product."
+        tests:
+          - not_null
+
+      - name: product_description
+        description: "Detailed description of the product."
+
+      - name: price
+        description: "Listing price in Vietnamese Dong (VND)."
+        tests:
+          - not_null
+
+      - name: category_id
+        description: "Foreign key reference to stg_category.category_id."
+        tests:
+          - not_null
+
+      - name: brand_id
+        description: "Foreign key reference to stg_brands.brand_id."
+        tests:
+          - not_null
+
+      - name: created_at
+        description: "Timestamp when the product was cataloged."
+        tests:
+          - not_null
+
+      - name: updated_at
+        description: "Timestamp when product metadata was last modified."
+
+      - name: _ingested_at
+        description: "Metadata timestamp when the record was processed by dbt."
+        tests:
+          - not_null
