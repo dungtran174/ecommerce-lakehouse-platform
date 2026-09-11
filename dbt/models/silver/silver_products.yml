@@ -1,0 +1,62 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# dbt Silver Model Documentation & Schema Assertions: silver_products
+# ==============================================================================
+
+version: 2
+
+models:
+  - name: silver_products
+    description: >
+      Conformed Silver Delta Lake table storing validated merchandise SKU catalog items.
+      Deduplicates snapshot records by product_id (keeping the latest update), trims titles
+      and descriptions, enforces strictly positive retail prices, asserts referential integrity
+      with categories and brands, and writes ACID Delta tables.
+    columns:
+      - name: product_id
+        description: "Primary key SKU identifier for the product."
+        tests:
+          - unique
+          - not_null
+
+      - name: product_name
+        description: "Cleansed commercial title of the product."
+        tests:
+          - not_null
+
+      - name: product_description
+        description: "Cleansed detailed product description."
+
+      - name: price
+        description: "Validated retail unit price in Vietnamese Dong (VND)."
+        tests:
+          - not_null
+
+      - name: category_id
+        description: "Foreign key reference to merchandise category."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_categories')
+              field: category_id
+
+      - name: brand_id
+        description: "Foreign key reference to registered brand."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_brands')
+              field: brand_id
+
+      - name: created_at
+        description: "Timestamp when the product was cataloged."
+        tests:
+          - not_null
+
+      - name: updated_at
+        description: "Timestamp when product metadata was last modified."
+
+      - name: _transformed_at
+        description: "Timestamp when the record was processed into the Silver Delta Lake layer."
+        tests:
+          - not_null
