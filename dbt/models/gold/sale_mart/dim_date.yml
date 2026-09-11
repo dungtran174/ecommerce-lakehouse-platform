@@ -1,0 +1,83 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# dbt Gold Model Documentation & Schema Assertions: dim_date
+# ==============================================================================
+
+version: 2
+
+models:
+  - name: dim_date
+    description: >
+      Granular calendar dimension table supporting time-intelligence aggregations,
+      cohort analysis, and trend reporting in the Kimball Galaxy Schema.
+    columns:
+      - name: date_key
+        description: "Surrogate primary key in integer format YYYYMMDD."
+        tests:
+          - unique
+          - not_null
+
+      - name: calendar_date
+        description: "Calendar date formatted as YYYY-MM-DD."
+        tests:
+          - unique
+          - not_null
+
+      - name: year
+        description: "Four-digit calendar year (e.g., 2025)."
+        tests:
+          - not_null
+
+      - name: month
+        description: "Calendar month number (1 - 12)."
+        tests:
+          - not_null
+
+      - name: month_year
+        description: "Formatted month and year label (e.g., 12-2025)."
+        tests:
+          - not_null
+
+      - name: quarter
+        description: "Calendar quarter number (1 - 4)."
+        tests:
+          - not_null
+
+      - name: quarter_name
+        description: "Quarter display label (Q1, Q2, Q3, Q4)."
+        tests:
+          - not_null
+
+      - name: quarter_year
+        description: "Combined quarter and year display label (e.g., Q4-2025)."
+        tests:
+          - not_null
+
+      - name: month_name
+        description: "Full English calendar month name (e.g., December)."
+        tests:
+          - not_null
+
+      - name: day_name
+        description: "Full day of week name (e.g., Monday, Tuesday)."
+        tests:
+          - not_null
+
+      - name: is_weekend
+        description: "Binary flag indicating weekend days (1 if Saturday or Sunday, else 0)."
+        tests:
+          - not_null
+          - accepted_values:
+              values: [0, 1]
+
+      - name: is_weekday
+        description: "Binary flag indicating weekdays (1 if Monday through Friday, else 0)."
+        tests:
+          - not_null
+          - accepted_values:
+              values: [0, 1]
+
+      - name: _created_at
+        description: "Timestamp when the dimension record was generated in Gold layer."
+        tests:
+          - not_null
