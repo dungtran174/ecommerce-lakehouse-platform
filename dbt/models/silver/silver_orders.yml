@@ -1,0 +1,58 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# dbt Silver Model Documentation & Schema Assertions: silver_orders
+# ==============================================================================
+
+version: 2
+
+models:
+  - name: silver_orders
+    description: >
+      Conformed Silver Delta Lake table recording cleansed transactional customer orders.
+      Deduplicates snapshot records on order_id (keeping the latest update state), enforces
+      referential integrity with customers and payment methods, and writes ACID Delta tables.
+    columns:
+      - name: order_id
+        description: "Primary key identifier for the customer sales order."
+        tests:
+          - unique
+          - not_null
+
+      - name: customer_id
+        description: "Foreign key reference to silver_customers.customer_id."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('silver_customers')
+              field: customer_id
+
+      - name: order_date
+        description: "Standardized transaction calendar date (YYYY-MM-DD)."
+        tests:
+          - not_null
+
+      - name: total_amount
+        description: "Gross order financial value before item-level line adjustments."
+        tests:
+          - not_null
+
+      - name: payment_method_id
+        description: "Foreign key reference to silver_payment_methods.payment_method_id."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('silver_payment_methods')
+              field: payment_method_id
+
+      - name: created_at
+        description: "UTC timestamp when the sales order was created."
+        tests:
+          - not_null
+
+      - name: updated_at
+        description: "Timestamp when the order status was last updated."
+
+      - name: _transformed_at
+        description: "Timestamp when the record was processed into the Silver Delta Lake layer."
+        tests:
+          - not_null

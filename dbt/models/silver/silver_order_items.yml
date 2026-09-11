@@ -1,0 +1,60 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# dbt Silver Model Documentation & Schema Assertions: silver_order_items
+# ==============================================================================
+
+version: 2
+
+models:
+  - name: silver_order_items
+    description: >
+      Conformed Silver Delta Lake table recording individual order line-item details.
+      Enforces referential integrity with orders and products, validates positive quantities,
+      computes line_total_amount after promotional discounts, and writes ACID Delta tables.
+    columns:
+      - name: order_item_id
+        description: "Surrogate primary key identifier for the line item."
+        tests:
+          - unique
+          - not_null
+
+      - name: order_id
+        description: "Foreign key reference to silver_orders.order_id."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('silver_orders')
+              field: order_id
+
+      - name: product_id
+        description: "Foreign key reference to silver_products.product_id."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('silver_products')
+              field: product_id
+
+      - name: quantity
+        description: "Validated units purchased for this SKU (strictly positive integer)."
+        tests:
+          - not_null
+
+      - name: price
+        description: "Unit SKU price in Vietnamese Dong (VND) at transaction time."
+        tests:
+          - not_null
+
+      - name: discount
+        description: "Promotional line discount applied to the line item."
+        tests:
+          - not_null
+
+      - name: line_total_amount
+        description: "Net line-item amount calculated as quantity * price - discount."
+        tests:
+          - not_null
+
+      - name: _transformed_at
+        description: "Timestamp when the record was processed into the Silver Delta Lake layer."
+        tests:
+          - not_null
