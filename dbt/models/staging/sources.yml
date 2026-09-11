@@ -1,0 +1,187 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# dbt Source Definitions: Raw Bronze Ingestion Layer
+# ==============================================================================
+
+version: 2
+
+sources:
+  - name: mysql_oltp
+    database: lakehouse
+    schema: bronze
+    description: >
+      Raw transactional MySQL OLTP database snapshots and incremental transaction logs
+      extracted via JDBC and landed into MinIO S3A storage (s3a://lakehouse/bronze/mysql/).
+
+    tables:
+      - name: customers_snapshot
+        description: >
+          Periodic snapshot of registered customer profiles including loyalty tiers,
+          contact details, and demographic attributes.
+        columns:
+          - name: customer_id
+            description: "Unique integer surrogate identifier for the customer."
+          - name: first_name
+            description: "Customer first name."
+          - name: last_name
+            description: "Customer last name / surname."
+          - name: email
+            description: "Contact email address (PII, to be sanitized/masked in downstream layers)."
+          - name: phone_number
+            description: "Mobile contact phone number (PII)."
+          - name: gender
+            description: "Customer gender classification (Nam, Nu, Other)."
+          - name: tire
+            description: "Loyalty program classification (Bronze, Silver, Gold, Platinum)."
+          - name: address
+            description: "Customer shipping province, city, or territory in Vietnam."
+          - name: created_at
+            description: "UTC timestamp when the customer profile was created."
+          - name: updated_at
+            description: "UTC timestamp when the customer profile was last updated."
+
+      - name: products_snapshot
+        description: >
+          Periodic snapshot of product catalog items, prices in VND, and category/brand relationships.
+        columns:
+          - name: product_id
+            description: "Unique product SKU identifier."
+          - name: product_name
+            description: "Commercial title / name of the product."
+          - name: product_description
+            description: "Detailed description of the product."
+          - name: price
+            description: "Base product listing price in Vietnamese Dong (VND)."
+          - name: category_id
+            description: "Foreign key reference to category_snapshot.category_id."
+          - name: brand_id
+            description: "Foreign key reference to brands_snapshot.brand_id."
+          - name: created_at
+            description: "Timestamp when the product was cataloged."
+          - name: updated_at
+            description: "Timestamp when product metadata was last modified."
+
+      - name: brands_snapshot
+        description: >
+          Master data catalog of commercial brands and countries of origin.
+        columns:
+          - name: brand_id
+            description: "Unique alphanumeric brand identifier."
+          - name: brand_name
+            description: "Registered brand trademark name."
+          - name: brand_origin
+            description: "Country or geographic region where brand was founded."
+
+      - name: category_snapshot
+        description: >
+          Hierarchical product categories and classification descriptions.
+        columns:
+          - name: category_id
+            description: "Unique integer identifier for the merchandise category."
+          - name: category_display_name
+            description: "Customer-facing category name displayed in application UI."
+          - name: category_description
+            description: "Detailed description of product types within category."
+
+      - name: payment_method_snapshot
+        description: >
+          Available payment options, gateways, digital wallets, and transaction types.
+        columns:
+          - name: payment_method_id
+            description: "Unique integer identifier for the payment channel."
+          - name: display_name
+            description: "Customer-facing payment label (Momo, ZaloPay, ShopeePay, COD, etc.)."
+          - name: type
+            description: "Payment channel category (E-Wallet, Card, Cash, Bank Transfer)."
+          - name: provider
+            description: "Payment gateway service provider or operating institution."
+
+      - name: orders_snapshot
+        description: >
+          Transactional order records capturing purchase timestamps, customer IDs,
+          gross amounts, and payment methods.
+        columns:
+          - name: order_id
+            description: "Unique identifier for the customer sales order."
+          - name: customer_id
+            description: "Foreign key reference to customers_snapshot.customer_id."
+          - name: order_date
+            description: "Timestamp when checkout transaction occurred."
+          - name: total_amount
+            description: "Gross order financial value before item-level line adjustments."
+          - name: payment_method_id
+            description: "Foreign key reference to payment_method_snapshot.payment_method_id."
+          - name: created_at
+            description: "Order record creation timestamp."
+          - name: updated_at
+            description: "Order status update timestamp."
+
+      - name: orders
+        identifier: orders_snapshot
+        description: "Alias reference to orders_snapshot table."
+
+      - name: order_items_snapshot
+        description: >
+          Granular line-item records for items purchased in each order, including
+          quantities, unit prices, and applied discounts.
+        columns:
+          - name: order_item_id
+            description: "Unique surrogate identifier for the individual line item."
+          - name: order_id
+            description: "Foreign key reference to orders_snapshot.order_id."
+          - name: product_id
+            description: "Foreign key reference to products_snapshot.product_id."
+          - name: quantity
+            description: "Number of units purchased for this SKU."
+          - name: price
+            description: "Unit price of SKU at transaction time in VND."
+          - name: discount
+            description: "Promotional discount amount applied to the line item."
+
+      - name: order_items
+        identifier: order_items_snapshot
+        description: "Alias reference to order_items_snapshot table."
+
+  - name: clickstream
+    database: lakehouse
+    schema: bronze
+    description: >
+      Semi-structured web and mobile application interaction logs in newline-delimited JSON
+      (NDJSON) partitioned by ingest date under s3a://lakehouse/bronze/clickstream/.
+
+    tables:
+      - name: clickstream_events
+        description: >
+          Raw clickstream session records capturing user actions, device telemetry,
+          geographic coordinates, marketing attribution, and engagement metrics.
+        columns:
+          - name: event_id
+            description: "Unique string UUID identifier for the clickstream session event."
+          - name: timestamp
+            description: "ISO 8601 UTC timestamp of session initiation."
+          - name: user_id
+            description: "Identifier of the user associated with the session (if authenticated)."
+          - name: user_segment
+            description: "Behavioral segment classification (new, returning, loyal, churn_risk)."
+          - name: device
+            description: "JSON struct containing device type, OS, browser name, and version."
+          - name: location
+            description: "JSON struct containing city, country code, and lat/lon coordinates."
+          - name: referrer
+            description: "Inbound referring URL (search engine, social platform, direct)."
+          - name: referrer_type
+            description: "Referrer category (search_engine, social_media, direct, email)."
+          - name: source
+            description: "UTM source attribution parameter (google, facebook, direct, newsletter)."
+          - name: campaign
+            description: "Marketing campaign attribution identifier."
+          - name: actions
+            description: "JSON array of user micro-actions (view, cart, add_to_cart, purchase, search)."
+          - name: session_metrics
+            description: "JSON struct summarizing session duration, page view count, and actions."
+          - name: ingest_date
+            description: "Partitioning date string (YYYY-MM-DD) reflecting when log was landed."
+
+      - name: events
+        identifier: clickstream_events
+        description: "Alias reference to clickstream_events table."
