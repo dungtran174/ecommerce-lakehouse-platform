@@ -1,0 +1,142 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# dbt Staging Model Documentation & Schema Assertions: stg_clickstream_events
+# ==============================================================================
+
+version: 2
+
+models:
+  - name: stg_clickstream_events
+    description: >
+      Staging view for semi-structured clickstream web and mobile interaction logs.
+      Parses nested JSON payloads into strongly typed relational columns (device telemetry,
+      geographic coordinates, inbound traffic attribution, engagement metrics, A/B cohorts),
+      preserves raw micro-action sequences for downstream explosion, and attaches audit metadata.
+    columns:
+      - name: event_id
+        description: "Primary key identifier for the clickstream session event."
+        tests:
+          - unique
+          - not_null
+
+      - name: session_id
+        description: "Surrogate identifier for the user browsing session."
+        tests:
+          - not_null
+
+      - name: event_timestamp
+        description: "ISO 8601 UTC timestamp of session initiation."
+        tests:
+          - not_null
+
+      - name: event_date
+        description: "Date component of the session initiation timestamp (YYYY-MM-DD)."
+        tests:
+          - not_null
+
+      - name: user_id
+        description: "Identifier of the authenticated user (nullable for anonymous visitors)."
+
+      - name: user_segment
+        description: "Behavioral cohort classification (new, returning, loyal, churn_risk)."
+        tests:
+          - accepted_values:
+              values: ["new", "returning", "loyal", "churn_risk"]
+
+      - name: device_type
+        description: "Client device category (desktop, mobile, tablet)."
+        tests:
+          - accepted_values:
+              values: ["desktop", "mobile", "tablet"]
+
+      - name: device_os
+        description: "Client operating system (iOS, Android, Windows, macOS, Linux)."
+        tests:
+          - not_null
+
+      - name: device_browser
+        description: "Client web browser name (Chrome, Safari, Firefox, Edge)."
+        tests:
+          - not_null
+
+      - name: device_version
+        description: "Browser or application client release version string."
+
+      - name: city
+        description: "User geographic city or province in Vietnam."
+        tests:
+          - not_null
+
+      - name: country
+        description: "Two-letter ISO country code."
+        tests:
+          - not_null
+
+      - name: latitude
+        description: "Geographic latitude coordinate."
+        tests:
+          - not_null
+
+      - name: longitude
+        description: "Geographic longitude coordinate."
+        tests:
+          - not_null
+
+      - name: referrer
+        description: "Inbound referring URL or channel (direct, social, search)."
+
+      - name: referrer_type
+        description: "Attribution category for incoming traffic (organic, social, paid, direct, email)."
+
+      - name: utm_source
+        description: "Marketing campaign source parameter."
+
+      - name: utm_campaign
+        description: "Marketing campaign identifier."
+
+      - name: duration_seconds
+        description: "Total active session duration in seconds."
+        tests:
+          - not_null
+
+      - name: page_views
+        description: "Total page views accumulated during the session."
+        tests:
+          - not_null
+
+      - name: actions_count
+        description: "Total micro-actions executed during the session."
+        tests:
+          - not_null
+
+      - name: has_purchase
+        description: "Boolean indicator whether the session resulted in a checkout purchase."
+        tests:
+          - not_null
+
+      - name: revenue
+        description: "Monetary transaction value generated during the session in VND."
+        tests:
+          - not_null
+
+      - name: is_mobile
+        description: "Boolean flag indicating whether the session originated from a mobile client."
+
+      - name: language
+        description: "Browser localization code (e.g., vi-VN, en-US)."
+
+      - name: ab_test
+        description: "A/B test bucket assignment (e.g., A, B)."
+
+      - name: actions
+        description: "Raw JSON string array of micro-actions preserved for silver layer unnesting."
+        tests:
+          - not_null
+
+      - name: ingest_date
+        description: "Bronze partition date reflecting when NDJSON logs were ingested."
+
+      - name: _ingested_at
+        description: "Metadata timestamp when the record was processed by dbt."
+        tests:
+          - not_null

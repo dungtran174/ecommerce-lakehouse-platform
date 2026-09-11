@@ -157,6 +157,8 @@ sources:
         columns:
           - name: event_id
             description: "Unique string UUID identifier for the clickstream session event."
+          - name: session_id
+            description: "Unique string identifier for the user browsing session."
           - name: timestamp
             description: "ISO 8601 UTC timestamp of session initiation."
           - name: user_id
@@ -179,6 +181,8 @@ sources:
             description: "JSON array of user micro-actions (view, cart, add_to_cart, purchase, search)."
           - name: session_metrics
             description: "JSON struct summarizing session duration, page view count, and actions."
+          - name: properties
+            description: "JSON struct containing session properties (language, currency, is_mobile, ab_test)."
           - name: ingest_date
             description: "Partitioning date string (YYYY-MM-DD) reflecting when log was landed."
 
