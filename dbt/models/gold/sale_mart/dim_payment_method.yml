@@ -1,0 +1,49 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# dbt Gold Model Documentation & Schema Assertions: dim_payment_method
+# ==============================================================================
+
+version: 2
+
+models:
+  - name: dim_payment_method
+    description: >
+      Gold analytical dimension table tracking payment channels and gateways.
+      Supports SCD Type 2 tracking with effective validity date ranges and current active indicators.
+    columns:
+      - name: payment_method_id
+        description: "Primary key identifier for the payment channel."
+        tests:
+          - unique
+          - not_null
+
+      - name: display_name
+        description: "Customer-facing payment channel label."
+        tests:
+          - not_null
+
+      - name: provider
+        description: "Payment gateway service provider."
+
+      - name: type
+        description: "Payment channel category (E-Wallet, Credit/Debit Card, Cash, Bank Transfer)."
+        tests:
+          - not_null
+
+      - name: effective_start_date
+        description: "SCD Type 2 record validity start date."
+        tests:
+          - not_null
+
+      - name: effective_end_date
+        description: "SCD Type 2 record expiration date (null for current active channel)."
+
+      - name: is_current
+        description: "Boolean flag indicating whether the record represents current channel state."
+        tests:
+          - not_null
+
+      - name: _created_at
+        description: "Timestamp when the dimension record was populated in Gold layer."
+        tests:
+          - not_null

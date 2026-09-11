@@ -1,0 +1,49 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# dbt Gold Model Documentation & Schema Assertions: dim_product
+# ==============================================================================
+
+version: 2
+
+models:
+  - name: dim_product
+    description: >
+      Gold analytical dimension table storing denormalized merchandise SKU items.
+      Enriches products with category labels and brand origins for multi-dimensional slice-and-dice.
+    columns:
+      - name: product_id
+        description: "Primary key SKU identifier for the product."
+        tests:
+          - unique
+          - not_null
+
+      - name: product_name
+        description: "Cleaned commercial product title."
+        tests:
+          - not_null
+
+      - name: product_description
+        description: "Detailed commercial description."
+
+      - name: unit_price
+        description: "Standard retail unit selling price in VND."
+        tests:
+          - not_null
+
+      - name: category
+        description: "Denormalized category display name."
+        tests:
+          - not_null
+
+      - name: brand_name
+        description: "Denormalized commercial brand trademark name."
+        tests:
+          - not_null
+
+      - name: brand_origin
+        description: "Country or geographic region of brand origin."
+
+      - name: _created_at
+        description: "Timestamp when the dimension record was populated in Gold layer."
+        tests:
+          - not_null
