@@ -257,11 +257,14 @@ services:
       AIRFLOW__CORE__LOAD_EXAMPLES: "false"
       _AIRFLOW_WWW_USER_USERNAME: ${_AIRFLOW_WWW_USER_USERNAME:-admin}
       _AIRFLOW_WWW_USER_PASSWORD: ${_AIRFLOW_WWW_USER_PASSWORD:-admin}
+      DBT_PROJECT_DIR: /opt/airflow/dbt
+      DBT_PROFILES_DIR: /opt/airflow/dbt
     volumes:
       - ../airflow/dags:/opt/airflow/dags
       - ../airflow/plugins:/opt/airflow/plugins
       - airflow_logs:/opt/airflow/logs
       - ../airflow/config/airflow.cfg:/opt/airflow/airflow.cfg:ro
+      - ../dbt:/opt/airflow/dbt
     networks:
       lakehouse-net:
         ipv4_address: 172.28.0.51
@@ -300,6 +303,8 @@ services:
       AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
       AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_SECRET_KEY:-lakehouse_airflow_secret_key_2025}
       AIRFLOW__API__AUTH_BACKENDS: "airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session"
+      DBT_PROJECT_DIR: /opt/airflow/dbt
+      DBT_PROFILES_DIR: /opt/airflow/dbt
     ports:
       - "${AIRFLOW_WEBSERVER_PORT:-8080}:8080"
     volumes:
@@ -307,6 +312,7 @@ services:
       - ../airflow/plugins:/opt/airflow/plugins
       - airflow_logs:/opt/airflow/logs
       - ../airflow/config/airflow.cfg:/opt/airflow/airflow.cfg:ro
+      - ../dbt:/opt/airflow/dbt
     networks:
       lakehouse-net:
         ipv4_address: 172.28.0.52
@@ -341,11 +347,14 @@ services:
       AIRFLOW__CORE__LOAD_EXAMPLES: "false"
       AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
       AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_SECRET_KEY:-lakehouse_airflow_secret_key_2025}
+      DBT_PROJECT_DIR: /opt/airflow/dbt
+      DBT_PROFILES_DIR: /opt/airflow/dbt
     volumes:
       - ../airflow/dags:/opt/airflow/dags
       - ../airflow/plugins:/opt/airflow/plugins
       - airflow_logs:/opt/airflow/logs
       - ../airflow/config/airflow.cfg:/opt/airflow/airflow.cfg:ro
+      - ../dbt:/opt/airflow/dbt
     networks:
       lakehouse-net:
         ipv4_address: 172.28.0.53

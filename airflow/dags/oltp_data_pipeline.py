@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 try:
+    from airflow.operators.bash import BashOperator
     from airflow.operators.empty import EmptyOperator
     from airflow.providers.amazon.aws.transfers.sql_to_s3 import SqlToS3Operator
 
@@ -21,6 +22,22 @@ except ImportError:  # pragma: no cover
         except ImportError:
             from airflow.operators.dummy import DummyOperator as EmptyOperator  # type: ignore[no-redef]
         from airflow.models.baseoperator import BaseOperator
+
+        try:
+            from airflow.operators.bash import BashOperator  # type: ignore[no-redef]
+        except ImportError:
+
+            class BashOperator(BaseOperator):  # type: ignore[no-redef]
+                def __init__(
+                    self,
+                    *,
+                    bash_command: str,
+                    env: dict[str, str] | None = None,
+                    **kwargs: Any,
+                ) -> None:
+                    super().__init__(**kwargs)
+                    self.bash_command = bash_command
+                    self.env = env or {}
 
         class SqlToS3Operator(BaseOperator):  # type: ignore[no-redef]
             def __init__(
@@ -97,6 +114,21 @@ except ImportError:  # pragma: no cover
         class EmptyOperator(BaseTask):  # type: ignore[no-redef]
             pass
 
+        class BashOperator(BaseTask):  # type: ignore[no-redef]
+            def __init__(
+                self,
+                task_id: str,
+                bash_command: str,
+                env: dict[str, str] | None = None,
+                **kwargs: Any,
+            ) -> None:
+                super().__init__(
+                    task_id=task_id,
+                    bash_command=bash_command,
+                    env=env or {},
+                    **kwargs,
+                )
+
         class SqlToS3Operator(BaseTask):  # type: ignore[no-redef]
             def __init__(
                 self,
@@ -129,6 +161,10 @@ except ImportError:  # pragma: no cover
 S3_BUCKET = os.getenv("MINIO_DEFAULT_BUCKET", "lakehouse")
 SQL_CONN_ID = "mysql_default"
 AWS_CONN_ID = "minio_default"
+
+# dbt transformation and data quality testing configuration
+DBT_PROJECT_DIR = os.getenv("DBT_PROJECT_DIR", "/opt/airflow/dbt")
+DBT_PROFILES_DIR = os.getenv("DBT_PROFILES_DIR", "/opt/airflow/dbt")
 
 # Table extraction specifications (source_table, target_key, query)
 TABLE_CONFIGS = [
@@ -222,12 +258,31 @@ with DAG(
         )
         extraction_tasks[cfg["name"]] = task
 
+    # dbt Transformation & Data Quality Test Tasks
+    dbt_compile = BashOperator(
+        task_id="dbt_compile",
+        bash_command=f"dbt compile --project-dir {DBT_PROJECT_DIR} --profiles-dir {DBT_PROFILES_DIR}",
+    )
+
+    dbt_run = BashOperator(
+        task_id="dbt_run",
+        bash_command=f"dbt run --project-dir {DBT_PROJECT_DIR} --profiles-dir {DBT_PROFILES_DIR}",
+    )
+
+    dbt_test = BashOperator(
+        task_id="dbt_test",
+        bash_command=f"dbt test --project-dir {DBT_PROJECT_DIR} --profiles-dir {DBT_PROFILES_DIR}",
+    )
+
     # Task dependency pipeline ordering:
     # 1. Start pipeline
     # 2. Extract dimensional & reference tables in parallel (brands, categories, payment_methods, customers, products)
     # 3. Extract transactional order headers
     # 4. Extract granular order line items
-    # 5. End pipeline
+    # 5. Compile dbt transformation models
+    # 6. Run dbt models across Bronze -> Silver -> Gold tiers
+    # 7. Execute dbt data quality schema and business assertions
+    # 8. End pipeline
     master_tasks = [
         extraction_tasks["brands"],
         extraction_tasks["categories"],
@@ -239,4 +294,10 @@ with DAG(
     start_pipeline >> master_tasks
     master_tasks >> extraction_tasks["orders"]
     extraction_tasks["orders"] >> extraction_tasks["order_items"]
-    extraction_tasks["order_items"] >> end_pipeline
+    (
+        extraction_tasks["order_items"]
+        >> dbt_compile
+        >> dbt_run
+        >> dbt_test
+        >> end_pipeline
+    )

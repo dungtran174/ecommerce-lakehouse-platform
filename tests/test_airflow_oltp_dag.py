@@ -6,7 +6,12 @@ import os
 import py_compile
 import unittest
 
-from airflow.dags.oltp_data_pipeline import TABLE_CONFIGS, dag
+from airflow.dags.oltp_data_pipeline import (
+    DBT_PROFILES_DIR,
+    DBT_PROJECT_DIR,
+    TABLE_CONFIGS,
+    dag,
+)
 
 
 class TestAirflowOltpDag(unittest.TestCase):
@@ -56,16 +61,42 @@ class TestAirflowOltpDag(unittest.TestCase):
             self.assertTrue(cfg["s3_key"].startswith("bronze/mysql/"))
             self.assertTrue(cfg["task_id"].startswith("extract_"))
 
+    def test_dbt_transformation_tasks_and_commands(self) -> None:
+        """Verify dbt transformation tasks (compile, run, test) are defined with valid commands."""
+        tasks_by_id = {}
+        if hasattr(dag, "task_dict") and dag.task_dict:
+            tasks_by_id = dag.task_dict
+        elif hasattr(dag, "tasks") and dag.tasks:
+            tasks_by_id = {t.task_id: t for t in dag.tasks}
+
+        self.assertIn("dbt_compile", tasks_by_id)
+        self.assertIn("dbt_run", tasks_by_id)
+        self.assertIn("dbt_test", tasks_by_id)
+
+        compile_task = tasks_by_id["dbt_compile"]
+        run_task = tasks_by_id["dbt_run"]
+        test_task = tasks_by_id["dbt_test"]
+
+        self.assertIn("dbt compile", compile_task.bash_command)
+        self.assertIn(f"--project-dir {DBT_PROJECT_DIR}", compile_task.bash_command)
+        self.assertIn(f"--profiles-dir {DBT_PROFILES_DIR}", compile_task.bash_command)
+
+        self.assertIn("dbt run", run_task.bash_command)
+        self.assertIn(f"--project-dir {DBT_PROJECT_DIR}", run_task.bash_command)
+        self.assertIn(f"--profiles-dir {DBT_PROFILES_DIR}", run_task.bash_command)
+
+        self.assertIn("dbt test", test_task.bash_command)
+        self.assertIn(f"--project-dir {DBT_PROJECT_DIR}", test_task.bash_command)
+        self.assertIn(f"--profiles-dir {DBT_PROFILES_DIR}", test_task.bash_command)
+
     def test_task_pipeline_dependencies(self) -> None:
         """Verify upstream/downstream task flow relationships."""
-        # Find tasks in DAG
         tasks_by_id = {}
         if hasattr(dag, "task_dict") and dag.task_dict:
             tasks_by_id = dag.task_dict
         elif hasattr(dag, "tasks") and dag.tasks:
             tasks_by_id = {t.task_id: t for t in dag.tasks}
         else:
-            # Fallback for custom DAG mock
             import airflow.dags.oltp_data_pipeline as module
 
             for attr_name in dir(module):
@@ -73,8 +104,11 @@ class TestAirflowOltpDag(unittest.TestCase):
                 if hasattr(val, "task_id"):
                     tasks_by_id[val.task_id] = val
 
-        # Ensure start and end tasks exist
+        # Ensure start, dbt, and end tasks exist
         self.assertIn("start_pipeline", tasks_by_id)
+        self.assertIn("dbt_compile", tasks_by_id)
+        self.assertIn("dbt_run", tasks_by_id)
+        self.assertIn("dbt_test", tasks_by_id)
         self.assertIn("end_pipeline", tasks_by_id)
 
         # Ensure all 7 extract tasks exist
@@ -85,6 +119,9 @@ class TestAirflowOltpDag(unittest.TestCase):
         start_task = tasks_by_id["start_pipeline"]
         orders_task = tasks_by_id["extract_orders_to_bronze"]
         items_task = tasks_by_id["extract_order_items_to_bronze"]
+        dbt_compile = tasks_by_id["dbt_compile"]
+        dbt_run = tasks_by_id["dbt_run"]
+        dbt_test = tasks_by_id["dbt_test"]
         end_task = tasks_by_id["end_pipeline"]
 
         # start_pipeline must be upstream of master tables
@@ -95,12 +132,23 @@ class TestAirflowOltpDag(unittest.TestCase):
         downstream_orders = [t.task_id for t in orders_task.downstream_list]
         self.assertIn("extract_order_items_to_bronze", downstream_orders)
 
-        # order_items must be upstream of end_pipeline
+        # order_items must be upstream of dbt_compile
         downstream_items = [t.task_id for t in items_task.downstream_list]
-        self.assertIn("end_pipeline", downstream_items)
+        self.assertIn("dbt_compile", downstream_items)
+        self.assertIn(
+            "extract_order_items_to_bronze",
+            [t.task_id for t in dbt_compile.upstream_list],
+        )
 
-        upstream_end = [t.task_id for t in end_task.upstream_list]
-        self.assertIn("extract_order_items_to_bronze", upstream_end)
+        # dbt_compile >> dbt_run >> dbt_test >> end_pipeline
+        self.assertIn("dbt_run", [t.task_id for t in dbt_compile.downstream_list])
+        self.assertIn("dbt_compile", [t.task_id for t in dbt_run.upstream_list])
+
+        self.assertIn("dbt_test", [t.task_id for t in dbt_run.downstream_list])
+        self.assertIn("dbt_run", [t.task_id for t in dbt_test.upstream_list])
+
+        self.assertIn("end_pipeline", [t.task_id for t in dbt_test.downstream_list])
+        self.assertIn("dbt_test", [t.task_id for t in end_task.upstream_list])
 
 
 if __name__ == "__main__":

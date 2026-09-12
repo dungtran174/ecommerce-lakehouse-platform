@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 try:
+    from airflow.operators.bash import BashOperator
     from airflow.operators.empty import EmptyOperator
     from airflow.operators.python import PythonOperator
     from airflow.providers.amazon.aws.transfers.sftp_to_s3 import SFTPToS3Operator
@@ -24,6 +25,22 @@ except ImportError:  # pragma: no cover
             from airflow.operators.dummy import DummyOperator as EmptyOperator  # type: ignore[no-redef]
         from airflow.models.baseoperator import BaseOperator
         from airflow.operators.python import PythonOperator  # type: ignore[no-redef]
+
+        try:
+            from airflow.operators.bash import BashOperator  # type: ignore[no-redef]
+        except ImportError:
+
+            class BashOperator(BaseOperator):  # type: ignore[no-redef]
+                def __init__(
+                    self,
+                    *,
+                    bash_command: str,
+                    env: dict[str, str] | None = None,
+                    **kwargs: Any,
+                ) -> None:
+                    super().__init__(**kwargs)
+                    self.bash_command = bash_command
+                    self.env = env or {}
 
         class SFTPToS3Operator(BaseOperator):  # type: ignore[no-redef]
             def __init__(
@@ -94,6 +111,21 @@ except ImportError:  # pragma: no cover
         class EmptyOperator(BaseTask):  # type: ignore[no-redef]
             pass
 
+        class BashOperator(BaseTask):  # type: ignore[no-redef]
+            def __init__(
+                self,
+                task_id: str,
+                bash_command: str,
+                env: dict[str, str] | None = None,
+                **kwargs: Any,
+            ) -> None:
+                super().__init__(
+                    task_id=task_id,
+                    bash_command=bash_command,
+                    env=env or {},
+                    **kwargs,
+                )
+
         class PythonOperator(BaseTask):  # type: ignore[no-redef]
             def __init__(
                 self,
@@ -139,6 +171,11 @@ MINIO_CONN_ID = "minio_default"
 S3_BUCKET = os.getenv("MINIO_DEFAULT_BUCKET", "lakehouse")
 SFTP_REMOTE_DIR = os.getenv("SFTP_REMOTE_DIR", "/var/log/ecommerce/clickstream")
 FILE_PATTERN = "*.json"
+
+# dbt transformation and test configuration
+DBT_PROJECT_DIR = os.getenv("DBT_PROJECT_DIR", "/opt/airflow/dbt")
+DBT_PROFILES_DIR = os.getenv("DBT_PROFILES_DIR", "/opt/airflow/dbt")
+DBT_SELECT_MODELS = "stg_clickstream_events+"
 
 
 def scan_remote_sftp_logs(**context: Any) -> list[str]:
@@ -248,8 +285,41 @@ with DAG(
         python_callable=verify_bronze_landing,
     )
 
+    dbt_compile = BashOperator(
+        task_id="dbt_compile",
+        bash_command=(
+            f"dbt compile --project-dir {DBT_PROJECT_DIR} "
+            f"--profiles-dir {DBT_PROFILES_DIR} --select {DBT_SELECT_MODELS}"
+        ),
+    )
+
+    dbt_run = BashOperator(
+        task_id="dbt_run",
+        bash_command=(
+            f"dbt run --project-dir {DBT_PROJECT_DIR} "
+            f"--profiles-dir {DBT_PROFILES_DIR} --select {DBT_SELECT_MODELS}"
+        ),
+    )
+
+    dbt_test = BashOperator(
+        task_id="dbt_test",
+        bash_command=(
+            f"dbt test --project-dir {DBT_PROJECT_DIR} "
+            f"--profiles-dir {DBT_PROFILES_DIR} --select {DBT_SELECT_MODELS}"
+        ),
+    )
+
     end_pipeline = EmptyOperator(task_id="end_pipeline")
 
-    # Ingestion Pipeline Flow:
-    # start_pipeline -> scan_sftp_logs -> transfer_clickstream_to_minio -> verify_bronze_landing -> end_pipeline
-    start_pipeline >> scan_logs >> transfer_logs >> verify_landing >> end_pipeline
+    # Ingestion & Transformation Pipeline Flow:
+    # start_pipeline -> scan_sftp_logs -> transfer_clickstream_to_minio -> verify_bronze_landing -> dbt_compile -> dbt_run -> dbt_test -> end_pipeline
+    (
+        start_pipeline
+        >> scan_logs
+        >> transfer_logs
+        >> verify_landing
+        >> dbt_compile
+        >> dbt_run
+        >> dbt_test
+        >> end_pipeline
+    )

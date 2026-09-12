@@ -8,6 +8,9 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from airflow.dags.user_activity_logs_pipeline import (
+    DBT_PROFILES_DIR,
+    DBT_PROJECT_DIR,
+    DBT_SELECT_MODELS,
     FILE_PATTERN,
     MINIO_CONN_ID,
     S3_BUCKET,
@@ -55,6 +58,38 @@ class TestAirflowClickstreamDag(unittest.TestCase):
         self.assertEqual(S3_BUCKET, "lakehouse")
         self.assertEqual(SFTP_REMOTE_DIR, "/var/log/ecommerce/clickstream")
         self.assertEqual(FILE_PATTERN, "*.json")
+        self.assertEqual(DBT_SELECT_MODELS, "stg_clickstream_events+")
+
+    def test_dbt_transformation_tasks_and_commands(self) -> None:
+        """Verify dbt transformation tasks (compile, run, test) target clickstream lineage."""
+        tasks_by_id = {}
+        if hasattr(dag, "task_dict") and dag.task_dict:
+            tasks_by_id = dag.task_dict
+        elif hasattr(dag, "tasks") and dag.tasks:
+            tasks_by_id = {t.task_id: t for t in dag.tasks}
+
+        self.assertIn("dbt_compile", tasks_by_id)
+        self.assertIn("dbt_run", tasks_by_id)
+        self.assertIn("dbt_test", tasks_by_id)
+
+        compile_task = tasks_by_id["dbt_compile"]
+        run_task = tasks_by_id["dbt_run"]
+        test_task = tasks_by_id["dbt_test"]
+
+        self.assertIn("dbt compile", compile_task.bash_command)
+        self.assertIn(f"--project-dir {DBT_PROJECT_DIR}", compile_task.bash_command)
+        self.assertIn(f"--profiles-dir {DBT_PROFILES_DIR}", compile_task.bash_command)
+        self.assertIn(f"--select {DBT_SELECT_MODELS}", compile_task.bash_command)
+
+        self.assertIn("dbt run", run_task.bash_command)
+        self.assertIn(f"--project-dir {DBT_PROJECT_DIR}", run_task.bash_command)
+        self.assertIn(f"--profiles-dir {DBT_PROFILES_DIR}", run_task.bash_command)
+        self.assertIn(f"--select {DBT_SELECT_MODELS}", run_task.bash_command)
+
+        self.assertIn("dbt test", test_task.bash_command)
+        self.assertIn(f"--project-dir {DBT_PROJECT_DIR}", test_task.bash_command)
+        self.assertIn(f"--profiles-dir {DBT_PROFILES_DIR}", test_task.bash_command)
+        self.assertIn(f"--select {DBT_SELECT_MODELS}", test_task.bash_command)
 
     def test_task_pipeline_dependencies(self) -> None:
         """Verify upstream/downstream task flow relationships."""
@@ -76,6 +111,9 @@ class TestAirflowClickstreamDag(unittest.TestCase):
             "scan_sftp_logs",
             "transfer_clickstream_to_minio",
             "verify_bronze_landing",
+            "dbt_compile",
+            "dbt_run",
+            "dbt_test",
             "end_pipeline",
         ]
         for task_id in expected_task_ids:
@@ -85,6 +123,9 @@ class TestAirflowClickstreamDag(unittest.TestCase):
         scan_task = tasks_by_id["scan_sftp_logs"]
         transfer_task = tasks_by_id["transfer_clickstream_to_minio"]
         verify_task = tasks_by_id["verify_bronze_landing"]
+        dbt_compile = tasks_by_id["dbt_compile"]
+        dbt_run = tasks_by_id["dbt_run"]
+        dbt_test = tasks_by_id["dbt_test"]
         end_task = tasks_by_id["end_pipeline"]
 
         # start_pipeline >> scan_sftp_logs
@@ -109,11 +150,21 @@ class TestAirflowClickstreamDag(unittest.TestCase):
             [t.task_id for t in verify_task.upstream_list],
         )
 
-        # verify_bronze_landing >> end_pipeline
-        self.assertIn("end_pipeline", [t.task_id for t in verify_task.downstream_list])
+        # verify_bronze_landing >> dbt_compile
+        self.assertIn("dbt_compile", [t.task_id for t in verify_task.downstream_list])
         self.assertIn(
-            "verify_bronze_landing", [t.task_id for t in end_task.upstream_list]
+            "verify_bronze_landing", [t.task_id for t in dbt_compile.upstream_list]
         )
+
+        # dbt_compile >> dbt_run >> dbt_test >> end_pipeline
+        self.assertIn("dbt_run", [t.task_id for t in dbt_compile.downstream_list])
+        self.assertIn("dbt_compile", [t.task_id for t in dbt_run.upstream_list])
+
+        self.assertIn("dbt_test", [t.task_id for t in dbt_run.downstream_list])
+        self.assertIn("dbt_run", [t.task_id for t in dbt_test.upstream_list])
+
+        self.assertIn("end_pipeline", [t.task_id for t in dbt_test.downstream_list])
+        self.assertIn("dbt_test", [t.task_id for t in end_task.upstream_list])
 
     @patch("airflow.plugins.sftp_hook.SFTPHook")
     def test_scan_remote_sftp_logs(self, mock_sftp_cls: MagicMock) -> None:

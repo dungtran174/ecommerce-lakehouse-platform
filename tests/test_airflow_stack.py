@@ -131,6 +131,12 @@ class TestAirflowStack(unittest.TestCase):
         )
         self.assertEqual(sch.get("command"), "scheduler")
 
+        # Assert dbt directory mount and configuration
+        self.assertIn("../dbt:/opt/airflow/dbt", ws.get("volumes", []))
+        self.assertIn("../dbt:/opt/airflow/dbt", sch.get("volumes", []))
+        self.assertEqual(ws["environment"].get("DBT_PROJECT_DIR"), "/opt/airflow/dbt")
+        self.assertEqual(sch["environment"].get("DBT_PROJECT_DIR"), "/opt/airflow/dbt")
+
     def test_env_example_airflow_variables(self) -> None:
         """Verify .env.example declares Airflow ports, credentials, and encryption keys."""
         with open(self.env_example_file, "r", encoding="utf-8") as f:
