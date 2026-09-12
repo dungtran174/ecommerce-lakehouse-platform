@@ -2,6 +2,12 @@
 
 from __future__ import annotations
 
+from airflow.plugins.alerting import (
+    sla_miss_alert,
+    task_failure_alert,
+    task_retry_alert,
+    task_success_alert,
+)
 from airflow.plugins.minio_hook import MinIOHook
 from airflow.plugins.sftp_hook import SFTPHook
 
@@ -23,4 +29,12 @@ class LakehousePlatformPlugin(AirflowPlugin):
     hooks = [MinIOHook, SFTPHook]
 
 
-__all__ = ["MinIOHook", "SFTPHook", "LakehousePlatformPlugin"]
+__all__ = [
+    "MinIOHook",
+    "SFTPHook",
+    "LakehousePlatformPlugin",
+    "task_failure_alert",
+    "task_retry_alert",
+    "task_success_alert",
+    "sla_miss_alert",
+]
