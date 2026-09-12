@@ -20,6 +20,10 @@ volumes:
     name: lakehouse_minio_data
   metastore_db_data:
     name: lakehouse_metastore_db_data
+  airflow_postgres_data:
+    name: lakehouse_airflow_postgres_data
+  airflow_logs:
+    name: lakehouse_airflow_logs
 
 services:
   # ----------------------------------------------------------------------------
@@ -208,6 +212,150 @@ services:
       timeout: 5s
       retries: 5
       start_period: 60s
+
+  # ----------------------------------------------------------------------------
+  # Airflow Metadata Backend Database: PostgreSQL 14
+  # Stores DAG metadata, run histories, task instance states, and XComs
+  # ----------------------------------------------------------------------------
+  airflow-postgres:
+    image: postgres:14
+    container_name: lakehouse-airflow-postgres
+    hostname: airflow-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${AIRFLOW_DB_USER:-airflow}
+      POSTGRES_PASSWORD: ${AIRFLOW_DB_PASSWORD:-airflow}
+      POSTGRES_DB: ${AIRFLOW_DB_NAME:-airflow}
+    ports:
+      - "${AIRFLOW_METASTORE_PORT:-5432}:5432"
+    volumes:
+      - airflow_postgres_data:/var/lib/postgresql/data
+    networks:
+      lakehouse-net:
+        ipv4_address: 172.28.0.50
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${AIRFLOW_DB_USER:-airflow}", "-d", "${AIRFLOW_DB_NAME:-airflow}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ----------------------------------------------------------------------------
+  # Airflow Database Migration & Admin User Provisioner
+  # Runs database schema initialization and creates administrator credentials
+  # ----------------------------------------------------------------------------
+  airflow-init:
+    image: apache/airflow:2.7.3
+    container_name: lakehouse-airflow-init
+    depends_on:
+      airflow-postgres:
+        condition: service_healthy
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${AIRFLOW_DB_USER:-airflow}:${AIRFLOW_DB_PASSWORD:-airflow}@airflow-postgres:5432/${AIRFLOW_DB_NAME:-airflow}
+      AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY:-46BKJoQYlPPOexq0OhDZnIlNepKFf87WFwLbfzqJZPo=}
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      _AIRFLOW_WWW_USER_USERNAME: ${_AIRFLOW_WWW_USER_USERNAME:-admin}
+      _AIRFLOW_WWW_USER_PASSWORD: ${_AIRFLOW_WWW_USER_PASSWORD:-admin}
+    volumes:
+      - ../airflow/dags:/opt/airflow/dags
+      - ../airflow/plugins:/opt/airflow/plugins
+      - airflow_logs:/opt/airflow/logs
+      - ../airflow/config/airflow.cfg:/opt/airflow/airflow.cfg:ro
+    networks:
+      lakehouse-net:
+        ipv4_address: 172.28.0.51
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        airflow db init && \
+        airflow users create \
+          --username "${_AIRFLOW_WWW_USER_USERNAME:-admin}" \
+          --password "${_AIRFLOW_WWW_USER_PASSWORD:-admin}" \
+          --firstname "Admin" \
+          --lastname "User" \
+          --role "Admin" \
+          --email "admin@lakehouse.local"
+
+  # ----------------------------------------------------------------------------
+  # Airflow Webserver: Apache Airflow 2.7.3 UI
+  # Provides DAG orchestration dashboard and REST API on port 8080
+  # ----------------------------------------------------------------------------
+  airflow-webserver:
+    image: apache/airflow:2.7.3
+    container_name: lakehouse-airflow-webserver
+    hostname: airflow-webserver
+    restart: unless-stopped
+    depends_on:
+      airflow-postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${AIRFLOW_DB_USER:-airflow}:${AIRFLOW_DB_PASSWORD:-airflow}@airflow-postgres:5432/${AIRFLOW_DB_NAME:-airflow}
+      AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY:-46BKJoQYlPPOexq0OhDZnIlNepKFf87WFwLbfzqJZPo=}
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
+      AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_SECRET_KEY:-lakehouse_airflow_secret_key_2025}
+      AIRFLOW__API__AUTH_BACKENDS: "airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session"
+    ports:
+      - "${AIRFLOW_WEBSERVER_PORT:-8080}:8080"
+    volumes:
+      - ../airflow/dags:/opt/airflow/dags
+      - ../airflow/plugins:/opt/airflow/plugins
+      - airflow_logs:/opt/airflow/logs
+      - ../airflow/config/airflow.cfg:/opt/airflow/airflow.cfg:ro
+    networks:
+      lakehouse-net:
+        ipv4_address: 172.28.0.52
+        aliases:
+          - airflow.lakehouse.local
+    command: webserver
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ----------------------------------------------------------------------------
+  # Airflow Scheduler: Apache Airflow 2.7.3 Job Scheduler
+  # Evaluates DAG schedules and dispatches task executions via LocalExecutor
+  # ----------------------------------------------------------------------------
+  airflow-scheduler:
+    image: apache/airflow:2.7.3
+    container_name: lakehouse-airflow-scheduler
+    hostname: airflow-scheduler
+    restart: unless-stopped
+    depends_on:
+      airflow-postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${AIRFLOW_DB_USER:-airflow}:${AIRFLOW_DB_PASSWORD:-airflow}@airflow-postgres:5432/${AIRFLOW_DB_NAME:-airflow}
+      AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY:-46BKJoQYlPPOexq0OhDZnIlNepKFf87WFwLbfzqJZPo=}
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
+      AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_SECRET_KEY:-lakehouse_airflow_secret_key_2025}
+    volumes:
+      - ../airflow/dags:/opt/airflow/dags
+      - ../airflow/plugins:/opt/airflow/plugins
+      - airflow_logs:/opt/airflow/logs
+      - ../airflow/config/airflow.cfg:/opt/airflow/airflow.cfg:ro
+    networks:
+      lakehouse-net:
+        ipv4_address: 172.28.0.53
+    command: scheduler
+    healthcheck:
+      test: ["CMD-SHELL", 'airflow jobs check --job-type SchedulerJob --hostname "$${HOSTNAME}"']
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
 
 
