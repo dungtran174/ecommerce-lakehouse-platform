@@ -85,7 +85,7 @@ jobs:
               if 'target' not in f and 'dbt_packages' not in f:
                   with open(f, 'r') as stream:
                       try:
-                          yaml.safe_load(stream)
+                          list(yaml.safe_load_all(stream))
                       except Exception as e:
                           print(f'Syntax error in {f}: {e}')
                           exit(1)
