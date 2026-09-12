@@ -15,5 +15,8 @@ resources:
   - spark-thrift-deployment.yaml
   - spark-thrift-service.yaml
   - spark-executor-pod-template.yaml
+  - airflow-deployment.yaml
+  - airflow-service.yaml
   - ../ingress/minio-ingress.yaml
   - ../ingress/spark-ui-ingress.yaml
+  - ../ingress/airflow-ingress.yaml

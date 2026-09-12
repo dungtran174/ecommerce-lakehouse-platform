@@ -1,0 +1,200 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# Apache Airflow 2.7.3 Kubernetes Deployments & Shared Storage PVCs
+# Deploys Airflow Webserver and Scheduler with shared DAGs/Logs storage
+# ==============================================================================
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: airflow-dags-pvc
+  namespace: lakehouse
+  labels:
+    app: airflow
+    tier: orchestration
+    component: storage
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: airflow-logs-pvc
+  namespace: lakehouse
+  labels:
+    app: airflow
+    tier: orchestration
+    component: storage
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: airflow-webserver
+  namespace: lakehouse
+  labels:
+    app: airflow
+    tier: orchestration
+    component: webserver
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: airflow
+      component: webserver
+  template:
+    metadata:
+      labels:
+        app: airflow
+        tier: orchestration
+        component: webserver
+    spec:
+      containers:
+        - name: airflow-webserver
+          image: apache/airflow:2.7.3
+          imagePullPolicy: IfNotPresent
+          command:
+            - airflow
+            - webserver
+          ports:
+            - name: webserver
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: AIRFLOW__CORE__EXECUTOR
+              value: "LocalExecutor"
+            - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
+              value: "postgresql+psycopg2://airflow:airflow@airflow-postgres:5432/airflow"
+            - name: AIRFLOW__CORE__FERNET_KEY
+              value: "46BKJoQYlPPOexq0OhDZnIlNepKFf87WFwLbfzqJZPo="
+            - name: AIRFLOW__CORE__LOAD_EXAMPLES
+              value: "false"
+            - name: AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION
+              value: "true"
+            - name: AIRFLOW__WEBSERVER__SECRET_KEY
+              value: "lakehouse_airflow_secret_key_2025"
+            - name: AIRFLOW__API__AUTH_BACKENDS
+              value: "airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session"
+            - name: DBT_PROJECT_DIR
+              value: "/opt/airflow/dbt"
+            - name: DBT_PROFILES_DIR
+              value: "/opt/airflow/dbt"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 45
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: 2000m
+              memory: 2Gi
+          volumeMounts:
+            - name: airflow-dags
+              mountPath: /opt/airflow/dags
+            - name: airflow-logs
+              mountPath: /opt/airflow/logs
+      volumes:
+        - name: airflow-dags
+          persistentVolumeClaim:
+            claimName: airflow-dags-pvc
+        - name: airflow-logs
+          persistentVolumeClaim:
+            claimName: airflow-logs-pvc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: airflow-scheduler
+  namespace: lakehouse
+  labels:
+    app: airflow
+    tier: orchestration
+    component: scheduler
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: airflow
+      component: scheduler
+  template:
+    metadata:
+      labels:
+        app: airflow
+        tier: orchestration
+        component: scheduler
+    spec:
+      containers:
+        - name: airflow-scheduler
+          image: apache/airflow:2.7.3
+          imagePullPolicy: IfNotPresent
+          command:
+            - airflow
+            - scheduler
+          env:
+            - name: AIRFLOW__CORE__EXECUTOR
+              value: "LocalExecutor"
+            - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
+              value: "postgresql+psycopg2://airflow:airflow@airflow-postgres:5432/airflow"
+            - name: AIRFLOW__CORE__FERNET_KEY
+              value: "46BKJoQYlPPOexq0OhDZnIlNepKFf87WFwLbfzqJZPo="
+            - name: AIRFLOW__CORE__LOAD_EXAMPLES
+              value: "false"
+            - name: AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION
+              value: "true"
+            - name: AIRFLOW__WEBSERVER__SECRET_KEY
+              value: "lakehouse_airflow_secret_key_2025"
+            - name: DBT_PROJECT_DIR
+              value: "/opt/airflow/dbt"
+            - name: DBT_PROFILES_DIR
+              value: "/opt/airflow/dbt"
+          livenessProbe:
+            exec:
+              command:
+                - /bin/bash
+                - -c
+                - 'airflow jobs check --job-type SchedulerJob --hostname "$${HOSTNAME}"'
+            initialDelaySeconds: 45
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: 2000m
+              memory: 2Gi
+          volumeMounts:
+            - name: airflow-dags
+              mountPath: /opt/airflow/dags
+            - name: airflow-logs
+              mountPath: /opt/airflow/logs
+      volumes:
+        - name: airflow-dags
+          persistentVolumeClaim:
+            claimName: airflow-dags-pvc
+        - name: airflow-logs
+          persistentVolumeClaim:
+            claimName: airflow-logs-pvc
