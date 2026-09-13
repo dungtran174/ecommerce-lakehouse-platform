@@ -288,16 +288,22 @@ class RangerStorage:
         return self._memory_policies.get(policy_id)
 
     def get_policy_by_name(
-        self, service_name: str, policy_name: str, policy_type: int = 0
+        self, service_name: str, policy_name: str, policy_type: int | None = None
     ) -> dict[str, Any] | None:
         if self.use_pg and self.conn:
             from psycopg2.extras import RealDictCursor
 
             with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
-                cur.execute(
-                    "SELECT policy_data FROM x_policy WHERE service_name = %s AND name = %s AND policy_type = %s;",
-                    (service_name, policy_name, policy_type),
-                )
+                if policy_type is not None:
+                    cur.execute(
+                        "SELECT policy_data FROM x_policy WHERE service_name = %s AND name = %s AND policy_type = %s;",
+                        (service_name, policy_name, policy_type),
+                    )
+                else:
+                    cur.execute(
+                        "SELECT policy_data FROM x_policy WHERE service_name = %s AND name = %s;",
+                        (service_name, policy_name),
+                    )
                 row = cur.fetchone()
                 if row:
                     return json.loads(row["policy_data"])
@@ -305,7 +311,7 @@ class RangerStorage:
             if (
                 p.get("service") == service_name
                 and p.get("name") == policy_name
-                and p.get("policyType", 0) == policy_type
+                and (policy_type is None or p.get("policyType", 0) == policy_type)
             ):
                 return p
         return None
