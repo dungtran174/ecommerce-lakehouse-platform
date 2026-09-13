@@ -287,6 +287,29 @@ class RangerStorage:
                     return json.loads(row["policy_data"])
         return self._memory_policies.get(policy_id)
 
+    def get_policy_by_name(
+        self, service_name: str, policy_name: str, policy_type: int = 0
+    ) -> dict[str, Any] | None:
+        if self.use_pg and self.conn:
+            from psycopg2.extras import RealDictCursor
+
+            with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    "SELECT policy_data FROM x_policy WHERE service_name = %s AND name = %s AND policy_type = %s;",
+                    (service_name, policy_name, policy_type),
+                )
+                row = cur.fetchone()
+                if row:
+                    return json.loads(row["policy_data"])
+        for p in self._memory_policies.values():
+            if (
+                p.get("service") == service_name
+                and p.get("name") == policy_name
+                and p.get("policyType", 0) == policy_type
+            ):
+                return p
+        return None
+
     def save_policy(self, policy_data: dict[str, Any]) -> dict[str, Any]:
         service_name = policy_data.get("service", "")
         name = policy_data.get("name", "")
@@ -325,8 +348,19 @@ class RangerStorage:
                 )
                 return policy_data
 
-        pol_id = policy_data.get("id") or self._policy_seq
-        self._policy_seq += 1
+        existing_id = None
+        for pid, p in self._memory_policies.items():
+            if (
+                p.get("service") == service_name
+                and p.get("name") == name
+                and p.get("policyType", 0) == policy_type
+            ):
+                existing_id = pid
+                break
+
+        pol_id = policy_data.get("id") or existing_id or self._policy_seq
+        if not existing_id and "id" not in policy_data:
+            self._policy_seq += 1
         policy_data["id"] = pol_id
         self._memory_policies[pol_id] = policy_data
         return policy_data
@@ -453,6 +487,30 @@ class RangerHTTPHandler(BaseHTTPRequestHandler):
             self._set_headers(200)
             self.wfile.write(json.dumps(policies).encode("utf-8"))
             return
+
+        # Policy by service and policy name
+        if path.startswith("/service/public/v2/api/service/") and "/policy/" in path:
+            parts = path.split("/")
+            if len(parts) >= 9 and parts[5] == "service" and parts[7] == "policy":
+                svc_name = parts[6]
+                pol_name = parts[8]
+                policy = storage.get_policy_by_name(svc_name, pol_name)
+                if policy:
+                    self._set_headers(200)
+                    self.wfile.write(json.dumps(policy).encode("utf-8"))
+                    return
+                self._set_headers(404)
+                self.wfile.write(
+                    json.dumps(
+                        {
+                            "error": (
+                                f"Policy '{pol_name}' for service '{svc_name}' not"
+                                " found"
+                            )
+                        }
+                    ).encode("utf-8")
+                )
+                return
 
         # Policy by ID
         if (
