@@ -24,6 +24,8 @@ volumes:
     name: lakehouse_airflow_postgres_data
   airflow_logs:
     name: lakehouse_airflow_logs
+  ranger_db_data:
+    name: lakehouse_ranger_db_data
 
 services:
   # ----------------------------------------------------------------------------
@@ -365,6 +367,72 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
+
+  # ----------------------------------------------------------------------------
+  # Apache Ranger Backend Database: PostgreSQL 14
+  # Stores Ranger user accounts, service definitions, policies, and audit logs
+  # ----------------------------------------------------------------------------
+  ranger-db:
+    image: postgres:14
+    container_name: lakehouse-ranger-db
+    hostname: ranger-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${RANGER_DB_USER:-rangeradmin}
+      POSTGRES_PASSWORD: ${RANGER_DB_PASSWORD:-rangeradmin}
+      POSTGRES_DB: ${RANGER_DB_NAME:-ranger}
+    ports:
+      - "${RANGER_DB_PORT:-5433}:5432"
+    volumes:
+      - ranger_db_data:/var/lib/postgresql/data
+    networks:
+      lakehouse-net:
+        ipv4_address: 172.28.0.60
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${RANGER_DB_USER:-rangeradmin}", "-d", "${RANGER_DB_NAME:-ranger}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ----------------------------------------------------------------------------
+  # Centralized Security Administration & Governance: Apache Ranger 2.4.0
+  # Serves Security Administration Web UI and REST API on port 6080
+  # ----------------------------------------------------------------------------
+  ranger-admin:
+    build:
+      context: ./ranger
+      dockerfile: Dockerfile
+    image: lakehouse/ranger-admin:2.4.0
+    container_name: lakehouse-ranger-admin
+    hostname: ranger-admin
+    restart: unless-stopped
+    depends_on:
+      ranger-db:
+        condition: service_healthy
+    environment:
+      RANGER_DB_HOST: ranger-db
+      RANGER_DB_PORT: 5432
+      RANGER_DB_NAME: ${RANGER_DB_NAME:-ranger}
+      RANGER_DB_USER: ${RANGER_DB_USER:-rangeradmin}
+      RANGER_DB_PASSWORD: ${RANGER_DB_PASSWORD:-rangeradmin}
+      RANGER_ADMIN_USERNAME: ${RANGER_ADMIN_USERNAME:-admin}
+      RANGER_ADMIN_PASSWORD: ${RANGER_ADMIN_PASSWORD:-Admin123!}
+      RANGER_PORT: ${RANGER_PORT:-6080}
+    ports:
+      - "${RANGER_PORT:-6080}:6080"
+    networks:
+      lakehouse-net:
+        ipv4_address: 172.28.0.61
+        aliases:
+          - ranger.lakehouse.local
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "6080"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
 
 
 

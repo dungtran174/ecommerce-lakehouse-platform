@@ -69,6 +69,8 @@ class TestDockerComposeConfig(unittest.TestCase):
             "AIRFLOW_WEBSERVER_PORT",
             "METABASE_PORT",
             "CLOUDBEAVER_PORT",
+            "RANGER_PORT",
+            "RANGER_DB_PORT",
         ]
 
         for var in expected_vars:
@@ -135,6 +137,28 @@ class TestDockerComposeConfig(unittest.TestCase):
         self.assertIn("SPARK_UI_PORT", content)
         self.assertIn("hive-metastore:", content)
         self.assertIn("http://localhost:4040", content)
+
+    def test_ranger_services_configuration(self) -> None:
+        """Verify Apache Ranger Admin and PostgreSQL backend database service configurations."""
+        with open(self.compose_file, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        # Ranger DB backend assertions
+        self.assertIn("ranger-db:", content)
+        self.assertIn("lakehouse-ranger-db", content)
+        self.assertIn("ranger_db_data:/var/lib/postgresql/data", content)
+        self.assertIn("172.28.0.60", content)
+        self.assertIn("RANGER_DB_PORT", content)
+
+        # Ranger Admin server assertions
+        self.assertIn("ranger-admin:", content)
+        self.assertIn("lakehouse-ranger-admin", content)
+        self.assertIn("context: ./ranger", content)
+        self.assertIn("image: lakehouse/ranger-admin:2.4.0", content)
+        self.assertIn("172.28.0.61", content)
+        self.assertIn("ranger.lakehouse.local", content)
+        self.assertIn("RANGER_PORT", content)
+        self.assertIn("ranger-db:", content)
 
 
 if __name__ == "__main__":
