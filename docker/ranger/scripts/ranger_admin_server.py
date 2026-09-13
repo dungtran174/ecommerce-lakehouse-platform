@@ -35,14 +35,17 @@ ADMIN_PASSWORD = os.getenv("RANGER_ADMIN_PASSWORD", "Admin123!")
 class RangerStorage:
     """Storage abstraction layer supporting PostgreSQL with in-memory fallback."""
 
-    def __init__(self) -> None:
+    def __init__(self, use_pg: bool = True) -> None:
         self.use_pg = False
         self.conn = None
         self._memory_services: dict[str, dict[str, Any]] = {}
         self._memory_policies: dict[int, dict[str, Any]] = {}
         self._policy_seq = 1
         self._service_seq = 1
-        self._init_db()
+        if use_pg:
+            self._init_db()
+        else:
+            self._seed_default_data()
 
     def _init_db(self) -> None:
         try:
@@ -89,6 +92,7 @@ class RangerStorage:
                     id SERIAL PRIMARY KEY,
                     name VARCHAR(255) UNIQUE NOT NULL,
                     type VARCHAR(255) NOT NULL,
+                    description TEXT,
                     is_enabled BOOLEAN DEFAULT TRUE,
                     configs TEXT,
                     tag_service VARCHAR(255),
@@ -162,7 +166,7 @@ class RangerStorage:
 
             with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute(
-                    "SELECT id, name, type, is_enabled, configs FROM x_service ORDER BY id;"
+                    "SELECT id, name, type, description, is_enabled, configs FROM x_service ORDER BY id;"
                 )
                 rows = cur.fetchall()
                 results = []
@@ -172,6 +176,7 @@ class RangerStorage:
                             "id": r["id"],
                             "name": r["name"],
                             "type": r["type"],
+                            "description": r.get("description") or "",
                             "isEnabled": r["is_enabled"],
                             "configs": json.loads(r["configs"]) if r["configs"] else {},
                         }
@@ -185,7 +190,7 @@ class RangerStorage:
 
             with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute(
-                    "SELECT id, name, type, is_enabled, configs FROM x_service WHERE name = %s;",
+                    "SELECT id, name, type, description, is_enabled, configs FROM x_service WHERE name = %s;",
                     (name,),
                 )
                 r = cur.fetchone()
@@ -194,6 +199,7 @@ class RangerStorage:
                         "id": r["id"],
                         "name": r["name"],
                         "type": r["type"],
+                        "description": r.get("description") or "",
                         "isEnabled": r["is_enabled"],
                         "configs": json.loads(r["configs"]) if r["configs"] else {},
                     }
@@ -202,6 +208,7 @@ class RangerStorage:
     def create_service(self, service_data: dict[str, Any]) -> dict[str, Any]:
         name = service_data.get("name", "unknown")
         svc_type = service_data.get("type", "trino")
+        description = service_data.get("description", "")
         is_enabled = service_data.get("isEnabled", True)
         configs = service_data.get("configs", {})
 
@@ -209,15 +216,16 @@ class RangerStorage:
             with self.conn.cursor() as cur:
                 cur.execute(
                     """
-                    INSERT INTO x_service (name, type, is_enabled, configs)
-                    VALUES (%s, %s, %s, %s)
+                    INSERT INTO x_service (name, type, description, is_enabled, configs)
+                    VALUES (%s, %s, %s, %s, %s)
                     ON CONFLICT (name) DO UPDATE SET
                         type = EXCLUDED.type,
+                        description = EXCLUDED.description,
                         is_enabled = EXCLUDED.is_enabled,
                         configs = EXCLUDED.configs
                     RETURNING id;
                     """,
-                    (name, svc_type, is_enabled, json.dumps(configs)),
+                    (name, svc_type, description, is_enabled, json.dumps(configs)),
                 )
                 svc_id = cur.fetchone()[0]
                 service_data["id"] = svc_id
@@ -542,6 +550,12 @@ class RangerHTTPHandler(BaseHTTPRequestHandler):
             self.wfile.write(
                 json.dumps({"error": "Invalid JSON in request body"}).encode("utf-8")
             )
+            return
+
+        if path.startswith("/service/public/v2/api/service"):
+            saved_service = storage.create_service(data)
+            self._set_headers(200)
+            self.wfile.write(json.dumps(saved_service).encode("utf-8"))
             return
 
         if path.startswith("/service/public/v2/api/policy/"):
