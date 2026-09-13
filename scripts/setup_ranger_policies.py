@@ -416,14 +416,15 @@ class RangerPolicyManager(RangerServiceManager):
             "denyExceptions": [],
         }
 
+    @classmethod
     def get_default_rbac_policies(
-        self, service_name: str = DEFAULT_SERVICE_NAME
+        cls, service_name: str = DEFAULT_SERVICE_NAME
     ) -> list[dict[str, Any]]:
         """Return full suite of standard lakehouse RBAC access control policies."""
         return [
-            self.build_admin_all_access_policy(service_name),
-            self.build_analyst_access_policy(service_name),
-            self.build_restricted_marketing_policy(service_name),
+            cls.build_admin_all_access_policy(service_name),
+            cls.build_analyst_access_policy(service_name),
+            cls.build_restricted_marketing_policy(service_name),
         ]
 
     def apply_rbac_policies(

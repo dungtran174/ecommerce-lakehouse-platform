@@ -195,18 +195,19 @@ class RangerMaskingManager(RangerPolicyManager):
             ],
         }
 
+    @classmethod
     def get_default_masking_policies(
-        self,
+        cls,
         service_name: str = DEFAULT_SERVICE_NAME,
         email_mask_type: str = DEFAULT_EMAIL_MASK_TYPE,
         phone_mask_type: str = DEFAULT_PHONE_MASK_TYPE,
     ) -> list[dict[str, Any]]:
         """Return standard customer PII data masking policies."""
         return [
-            self.build_email_masking_policy(
+            cls.build_email_masking_policy(
                 service_name=service_name, mask_type=email_mask_type
             ),
-            self.build_phone_masking_policy(
+            cls.build_phone_masking_policy(
                 service_name=service_name, mask_type=phone_mask_type
             ),
         ]
