@@ -1,0 +1,167 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# Apache Ranger 2.4.0 & PostgreSQL Backend Kubernetes Deployment
+# Provides Centralized Security Administration & Governance
+# ==============================================================================
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ranger-db-pvc
+  namespace: lakehouse
+  labels:
+    app: ranger
+    tier: security
+    component: database
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ranger-db
+  namespace: lakehouse
+  labels:
+    app: ranger
+    tier: security
+    component: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ranger
+      component: database
+  template:
+    metadata:
+      labels:
+        app: ranger
+        tier: security
+        component: database
+    spec:
+      containers:
+        - name: ranger-db
+          image: postgres:14-alpine
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: postgres
+              containerPort: 5432
+              protocol: TCP
+          env:
+            - name: POSTGRES_DB
+              value: ranger
+            - name: POSTGRES_USER
+              value: rangeradmin
+            - name: POSTGRES_PASSWORD
+              value: rangeradmin
+          volumeMounts:
+            - name: db-data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - rangeradmin
+                - -d
+                - ranger
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - rangeradmin
+                - -d
+                - ranger
+            initialDelaySeconds: 20
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      volumes:
+        - name: db-data
+          persistentVolumeClaim:
+            claimName: ranger-db-pvc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ranger-admin
+  namespace: lakehouse
+  labels:
+    app: ranger
+    tier: security
+    component: admin
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ranger
+      component: admin
+  template:
+    metadata:
+      labels:
+        app: ranger
+        tier: security
+        component: admin
+    spec:
+      containers:
+        - name: ranger-admin
+          image: lakehouse/ranger-admin:2.4.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 6080
+              protocol: TCP
+          env:
+            - name: RANGER_DB_HOST
+              value: ranger-db
+            - name: RANGER_DB_PORT
+              value: "5432"
+            - name: RANGER_DB_NAME
+              value: ranger
+            - name: RANGER_DB_USER
+              value: rangeradmin
+            - name: RANGER_DB_PASSWORD
+              value: rangeradmin
+            - name: RANGER_ADMIN_USERNAME
+              value: admin
+            - name: RANGER_ADMIN_PASSWORD
+              value: Admin123!
+            - name: RANGER_PORT
+              value: "6080"
+          readinessProbe:
+            httpGet:
+              path: /login.jsp
+              port: 6080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /login.jsp
+              port: 6080
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi

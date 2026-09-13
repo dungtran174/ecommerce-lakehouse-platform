@@ -17,6 +17,9 @@ resources:
   - spark-executor-pod-template.yaml
   - airflow-deployment.yaml
   - airflow-service.yaml
+  - ranger-deployment.yaml
+  - ranger-service.yaml
   - ../ingress/minio-ingress.yaml
   - ../ingress/spark-ui-ingress.yaml
   - ../ingress/airflow-ingress.yaml
+  - ../ingress/ranger-ingress.yaml

@@ -1,0 +1,31 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# Nginx Ingress Manifest for Apache Ranger Admin Web UI & REST API
+# Routes hostname: ranger.lakehouse.local
+# ==============================================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ranger-ingress
+  namespace: lakehouse
+  labels:
+    app: ranger
+    tier: security
+    component: ingress
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+spec:
+  rules:
+    - host: ranger.lakehouse.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ranger-admin
+                port:
+                  number: 6080
