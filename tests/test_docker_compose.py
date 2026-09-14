@@ -179,6 +179,9 @@ class TestDockerComposeConfig(unittest.TestCase):
         self.assertIn("node-coordinator.properties", content)
         self.assertIn("jvm.config", content)
         self.assertIn("config.properties", content)
+        self.assertIn("access-control.properties", content)
+        self.assertIn("ranger-trino-security.xml", content)
+        self.assertIn("ranger-admin:", content)
 
         # Trino Worker assertions
         self.assertIn("trino-worker:", content)

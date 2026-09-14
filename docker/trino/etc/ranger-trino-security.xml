@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+    <!-- Apache Ranger Service Name configured in Ranger Admin -->
+    <property>
+        <name>ranger.plugin.trino.service.name</name>
+        <value>dev_trino</value>
+        <description>Name of the Ranger service repository for Trino</description>
+    </property>
+
+    <!-- Policy Source Implementation Class -->
+    <property>
+        <name>ranger.plugin.trino.policy.source.impl</name>
+        <value>org.apache.ranger.admin.client.RangerAdminRESTClient</value>
+        <description>Class used to fetch policies from Ranger Admin</description>
+    </property>
+
+    <!-- Ranger Admin REST Endpoint URL -->
+    <property>
+        <name>ranger.plugin.trino.policy.rest.url</name>
+        <value>http://ranger-admin:6080</value>
+        <description>URL to access Apache Ranger Admin REST APIs</description>
+    </property>
+
+    <!-- Policy Polling Interval in Milliseconds -->
+    <property>
+        <name>ranger.plugin.trino.policy.pollIntervalMs</name>
+        <value>30000</value>
+        <description>Interval in milliseconds between policy refresh calls</description>
+    </property>
+
+    <!-- Policy Cache Directory for Local Persistence and Offline Resiliency -->
+    <property>
+        <name>ranger.plugin.trino.policy.cache.dir</name>
+        <value>/data/trino/ranger/cache</value>
+        <description>Local directory to cache policies for offline failover</description>
+    </property>
+
+    <!-- REST Client HTTP Connection and Read Timeouts -->
+    <property>
+        <name>ranger.plugin.trino.policy.rest.client.connection.timeoutMs</name>
+        <value>120000</value>
+        <description>Connection timeout for Ranger Admin REST calls</description>
+    </property>
+
+    <property>
+        <name>ranger.plugin.trino.policy.rest.client.read.timeoutMs</name>
+        <value>30000</value>
+        <description>Read timeout for Ranger Admin REST calls</description>
+    </property>
+</configuration>

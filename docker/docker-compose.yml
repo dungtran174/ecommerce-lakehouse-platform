@@ -448,10 +448,21 @@ services:
     restart: unless-stopped
     ports:
       - "${TRINO_PORT:-8085}:8085"
+    depends_on:
+      ranger-admin:
+        condition: service_healthy
+      hive-metastore:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
     volumes:
       - ./trino/etc/node-coordinator.properties:/etc/trino/node.properties:ro
       - ./trino/etc/jvm.config:/etc/trino/jvm.config:ro
       - ./trino/etc/config.properties:/etc/trino/config.properties:ro
+      - ./trino/etc/access-control.properties:/etc/trino/access-control.properties:ro
+      - ./trino/etc/ranger-trino-security.xml:/etc/trino/ranger-trino-security.xml:ro
+      - ./trino/etc/ranger-trino-audit.xml:/etc/trino/ranger-trino-audit.xml:ro
+      - ./trino/etc/ranger-trino-policymgr-ssl.xml:/etc/trino/ranger-trino-policymgr-ssl.xml:ro
       - ./trino/catalog:/etc/trino/catalog:ro
       - trino_coordinator_data:/data/trino
     networks:
@@ -483,6 +494,10 @@ services:
       - ./trino/etc/node-worker.properties:/etc/trino/node.properties:ro
       - ./trino/etc/jvm.config:/etc/trino/jvm.config:ro
       - ./trino/etc/config-worker.properties:/etc/trino/config.properties:ro
+      - ./trino/etc/access-control.properties:/etc/trino/access-control.properties:ro
+      - ./trino/etc/ranger-trino-security.xml:/etc/trino/ranger-trino-security.xml:ro
+      - ./trino/etc/ranger-trino-audit.xml:/etc/trino/ranger-trino-audit.xml:ro
+      - ./trino/etc/ranger-trino-policymgr-ssl.xml:/etc/trino/ranger-trino-policymgr-ssl.xml:ro
       - ./trino/catalog:/etc/trino/catalog:ro
       - trino_worker_data:/data/trino
     networks:

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+    <!-- Audit Logging Configuration for Apache Ranger Trino Plugin -->
+    <property>
+        <name>xasecure.audit.is.enabled</name>
+        <value>true</value>
+        <description>Enable audit logging for authorization decisions</description>
+    </property>
+
+    <property>
+        <name>xasecure.audit.destination.solr</name>
+        <value>false</value>
+        <description>Disable Solr audit destination in dev environment</description>
+    </property>
+
+    <property>
+        <name>xasecure.audit.destination.hdfs</name>
+        <value>false</value>
+        <description>Disable HDFS audit destination in dev environment</description>
+    </property>
+
+    <property>
+        <name>xasecure.audit.destination.log4j</name>
+        <value>true</value>
+        <description>Direct audit events to log4j console and Trino server logs</description>
+    </property>
+</configuration>
