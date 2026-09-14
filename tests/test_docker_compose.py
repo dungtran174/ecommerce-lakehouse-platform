@@ -160,6 +160,34 @@ class TestDockerComposeConfig(unittest.TestCase):
         self.assertIn("RANGER_PORT", content)
         self.assertIn("ranger-db:", content)
 
+    def test_trino_services_configuration(self) -> None:
+        """Verify Trino Coordinator and Worker distributed query engine service configurations."""
+        with open(self.compose_file, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        # Storage volumes
+        self.assertIn("trino_coordinator_data:", content)
+        self.assertIn("trino_worker_data:", content)
+
+        # Trino Coordinator assertions
+        self.assertIn("trino-coordinator:", content)
+        self.assertIn("lakehouse-trino-coordinator", content)
+        self.assertIn("image: trinodb/trino:435", content)
+        self.assertIn("172.28.0.70", content)
+        self.assertIn("trino.lakehouse.local", content)
+        self.assertIn("TRINO_PORT", content)
+        self.assertIn("node-coordinator.properties", content)
+        self.assertIn("jvm.config", content)
+        self.assertIn("config.properties", content)
+
+        # Trino Worker assertions
+        self.assertIn("trino-worker:", content)
+        self.assertIn("lakehouse-trino-worker", content)
+        self.assertIn("172.28.0.71", content)
+        self.assertIn("node-worker.properties", content)
+        self.assertIn("config-worker.properties", content)
+        self.assertIn("condition: service_healthy", content)
+
 
 if __name__ == "__main__":
     unittest.main()

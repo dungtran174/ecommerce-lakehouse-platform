@@ -26,6 +26,10 @@ volumes:
     name: lakehouse_airflow_logs
   ranger_db_data:
     name: lakehouse_ranger_db_data
+  trino_coordinator_data:
+    name: lakehouse_trino_coordinator_data
+  trino_worker_data:
+    name: lakehouse_trino_worker_data
 
 services:
   # ----------------------------------------------------------------------------
@@ -432,6 +436,65 @@ services:
       timeout: 10s
       retries: 5
       start_period: 20s
+
+  # ----------------------------------------------------------------------------
+  # Distributed SQL Query Serving Engine: Trino Coordinator
+  # Serves high-performance distributed queries and Web UI on port 8085
+  # ----------------------------------------------------------------------------
+  trino-coordinator:
+    image: trinodb/trino:435
+    container_name: lakehouse-trino-coordinator
+    hostname: trino-coordinator
+    restart: unless-stopped
+    ports:
+      - "${TRINO_PORT:-8085}:8085"
+    volumes:
+      - ./trino/etc/node-coordinator.properties:/etc/trino/node.properties:ro
+      - ./trino/etc/jvm.config:/etc/trino/jvm.config:ro
+      - ./trino/etc/config.properties:/etc/trino/config.properties:ro
+      - ./trino/catalog:/etc/trino/catalog:ro
+      - trino_coordinator_data:/data/trino
+    networks:
+      lakehouse-net:
+        ipv4_address: 172.28.0.70
+        aliases:
+          - trino.lakehouse.local
+          - trino-coordinator
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8085/v1/info || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ----------------------------------------------------------------------------
+  # Distributed SQL Query Serving Engine: Trino Worker
+  # Executes distributed MPP tasks dispatched by Trino Coordinator
+  # ----------------------------------------------------------------------------
+  trino-worker:
+    image: trinodb/trino:435
+    container_name: lakehouse-trino-worker
+    hostname: trino-worker
+    restart: unless-stopped
+    depends_on:
+      trino-coordinator:
+        condition: service_healthy
+    volumes:
+      - ./trino/etc/node-worker.properties:/etc/trino/node.properties:ro
+      - ./trino/etc/jvm.config:/etc/trino/jvm.config:ro
+      - ./trino/etc/config-worker.properties:/etc/trino/config.properties:ro
+      - ./trino/catalog:/etc/trino/catalog:ro
+      - trino_worker_data:/data/trino
+    networks:
+      lakehouse-net:
+        ipv4_address: 172.28.0.71
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8085/v1/info || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
 
 
 
