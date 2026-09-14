@@ -27,6 +27,12 @@ class TestTrinoConfig(unittest.TestCase):
         )
         cls.tpch_catalog_file = os.path.join(cls.trino_catalog_dir, "tpch.properties")
         cls.tpcds_catalog_file = os.path.join(cls.trino_catalog_dir, "tpcds.properties")
+        cls.delta_catalog_file = os.path.join(cls.trino_catalog_dir, "delta.properties")
+        cls.lakehouse_catalog_file = os.path.join(
+            cls.trino_catalog_dir, "lakehouse.properties"
+        )
+        cls.hive_catalog_file = os.path.join(cls.trino_catalog_dir, "hive.properties")
+        cls.mysql_catalog_file = os.path.join(cls.trino_catalog_dir, "mysql.properties")
 
     def _read_properties(self, file_path: str) -> dict[str, str]:
         """Parse simple Java properties file into Python dictionary."""
@@ -62,6 +68,19 @@ class TestTrinoConfig(unittest.TestCase):
         )
         self.assertTrue(
             os.path.exists(self.tpcds_catalog_file), "tpcds.properties must exist"
+        )
+        self.assertTrue(
+            os.path.exists(self.delta_catalog_file), "delta.properties must exist"
+        )
+        self.assertTrue(
+            os.path.exists(self.lakehouse_catalog_file),
+            "lakehouse.properties must exist",
+        )
+        self.assertTrue(
+            os.path.exists(self.hive_catalog_file), "hive.properties must exist"
+        )
+        self.assertTrue(
+            os.path.exists(self.mysql_catalog_file), "mysql.properties must exist"
         )
 
     def test_trino_coordinator_config(self) -> None:
@@ -113,12 +132,24 @@ class TestTrinoConfig(unittest.TestCase):
         self.assertNotEqual(coord_props["node.id"], worker_props["node.id"])
 
     def test_trino_catalogs(self) -> None:
-        """Verify TPCH and TPCDS benchmark catalog connectors."""
+        """Verify benchmark, Lakehouse Delta, Hive, and MySQL catalog connectors."""
         tpch_props = self._read_properties(self.tpch_catalog_file)
         self.assertEqual(tpch_props.get("connector.name"), "tpch")
 
         tpcds_props = self._read_properties(self.tpcds_catalog_file)
         self.assertEqual(tpcds_props.get("connector.name"), "tpcds")
+
+        delta_props = self._read_properties(self.delta_catalog_file)
+        self.assertEqual(delta_props.get("connector.name"), "delta-lake")
+
+        lakehouse_props = self._read_properties(self.lakehouse_catalog_file)
+        self.assertEqual(lakehouse_props.get("connector.name"), "delta-lake")
+
+        hive_props = self._read_properties(self.hive_catalog_file)
+        self.assertEqual(hive_props.get("connector.name"), "hive")
+
+        mysql_props = self._read_properties(self.mysql_catalog_file)
+        self.assertEqual(mysql_props.get("connector.name"), "mysql")
 
 
 if __name__ == "__main__":
