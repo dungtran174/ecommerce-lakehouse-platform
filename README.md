@@ -148,6 +148,8 @@ Using **Apache Ranger** integrated with **Trino**:
 - **Dynamic Column Masking:** Sensitive customer fields (`phone_number`, `email`) are masked dynamically for unauthorized roles.
 - **Audit Logging:** Every read and write transaction against Delta Lake tables is recorded for compliance.
 
+For detailed security architecture, dynamic masking rules, and distributed query federation recipes, refer to the [Apache Ranger Security Runbook](docs/setup/ranger_security.md) and [Trino Query Engine & Federation Guide](docs/setup/trino.md).
+
 ---
 
 ## 7. Business Intelligence & Dashboards
