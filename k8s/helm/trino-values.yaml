@@ -1,0 +1,142 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# Official Trino Helm Chart Configuration Values (trinodb/trino)
+# Configures Coordinator, Workers, MinIO Delta Lake Catalogs, and Ranger Security
+# ==============================================================================
+
+image:
+  repository: trinodb/trino
+  tag: "435"
+  pullPolicy: IfNotPresent
+
+server:
+  workers: 2
+  node:
+    environment: production
+    dataDir: /data/trino
+  log:
+    trino:
+      level: INFO
+  config:
+    path: /etc/trino
+    http:
+      port: 8085
+    query:
+      maxMemory: 4GB
+      maxMemoryPerNode: 1GB
+      maxTotalMemoryPerNode: 2GB
+  exchange:
+    filesystem:
+      enabled: false
+
+coordinator:
+  jvm:
+    maxHeapSize: 2G
+    gcMethod:
+      g1:
+        enabled: true
+  config:
+    query:
+      maxMemory: 4GB
+  resources:
+    requests:
+      cpu: 1000m
+      memory: 2Gi
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+
+worker:
+  jvm:
+    maxHeapSize: 2G
+    gcMethod:
+      g1:
+        enabled: true
+  resources:
+    requests:
+      cpu: 1000m
+      memory: 2Gi
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+
+service:
+  type: ClusterIP
+  port: 8085
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+  hosts:
+    - host: trino.lakehouse.local
+      paths:
+        - path: /
+          pathType: Prefix
+
+# Access Control Configuration (Apache Ranger)
+accessControl:
+  type: ranger
+  configFile: /etc/trino/access-control.properties
+  properties:
+    access-control.name: ranger
+    ranger.trino-service-name: dev_trino
+    ranger.policy-cache-dir: /data/trino/ranger/cache
+    ranger.poll-interval: 30s
+
+# Catalogs configured for Lakehouse Storage and Federation
+catalogs:
+  delta: |
+    connector.name=delta-lake
+    hive.metastore.uri=thrift://hive-metastore:9083
+    fs.native-s3.enabled=true
+    s3.endpoint=http://minio:9000
+    s3.region=us-east-1
+    s3.path-style-access=true
+    s3.aws-access-key=minioadmin
+    s3.aws-secret-key=minioadmin
+    s3.ssl.enabled=false
+    delta.register-table-procedure.enabled=true
+    delta.metadata.cache-ttl=10m
+
+  lakehouse: |
+    connector.name=delta-lake
+    hive.metastore.uri=thrift://hive-metastore:9083
+    fs.native-s3.enabled=true
+    s3.endpoint=http://minio:9000
+    s3.region=us-east-1
+    s3.path-style-access=true
+    s3.aws-access-key=minioadmin
+    s3.aws-secret-key=minioadmin
+    s3.ssl.enabled=false
+    delta.register-table-procedure.enabled=true
+    delta.metadata.cache-ttl=10m
+
+  hive: |
+    connector.name=hive
+    hive.metastore.uri=thrift://hive-metastore:9083
+    fs.native-s3.enabled=true
+    s3.endpoint=http://minio:9000
+    s3.region=us-east-1
+    s3.path-style-access=true
+    s3.aws-access-key=minioadmin
+    s3.aws-secret-key=minioadmin
+    s3.ssl.enabled=false
+    hive.s3.endpoint=http://minio:9000
+    hive.storage-format=PARQUET
+
+  mysql: |
+    connector.name=mysql
+    connection-url=jdbc:mysql://mysql-oltp:3306/ecommerce_oltp
+    connection-user=lakehouse_user
+    connection-password=lakehouse_password
+
+  tpch: |
+    connector.name=tpch
+
+  tpcds: |
+    connector.name=tpcds

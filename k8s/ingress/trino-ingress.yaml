@@ -1,0 +1,31 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# Nginx Ingress Manifest for Trino Distributed Query Engine Web UI & API
+# Routes hostname: trino.lakehouse.local
+# ==============================================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: trino-ingress
+  namespace: lakehouse
+  labels:
+    app: trino
+    tier: query
+    component: ingress
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+spec:
+  rules:
+    - host: trino.lakehouse.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: trino-coordinator
+                port:
+                  number: 8085

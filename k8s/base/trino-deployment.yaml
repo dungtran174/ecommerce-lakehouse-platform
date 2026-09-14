@@ -1,0 +1,333 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# Kubernetes Deployment & ConfigMaps Manifest - Trino Coordinator & Workers
+# ==============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trino-etc-config
+  namespace: lakehouse
+  labels:
+    app: trino
+    tier: query
+    component: configuration
+data:
+  node-coordinator.properties: |
+    node.environment=production
+    node.id=trino-k8s-coordinator-01
+    node.data-dir=/data/trino
+
+  node-worker.properties: |
+    node.environment=production
+    node.id=trino-k8s-worker-01
+    node.data-dir=/data/trino
+
+  jvm.config: |
+    -server
+    -Xmx2G
+    -XX:+UseG1GC
+    -XX:G1HeapRegionSize=32M
+    -XX:+ExplicitGCInvokesConcurrent
+    -XX:+ExitOnOutOfMemoryError
+    -Djdk.attach.allowAttachSelf=true
+
+  config.properties: |
+    coordinator=true
+    node-scheduler.include-coordinator=false
+    http-server.http.port=8085
+    discovery.uri=http://trino-coordinator:8085
+    query.max-memory=4GB
+    query.max-memory-per-node=1GB
+    query.max-total-memory-per-node=2GB
+
+  config-worker.properties: |
+    coordinator=false
+    http-server.http.port=8085
+    discovery.uri=http://trino-coordinator:8085
+    query.max-memory=4GB
+    query.max-memory-per-node=1GB
+    query.max-total-memory-per-node=2GB
+
+  access-control.properties: |
+    access-control.name=ranger
+    ranger.trino-service-name=dev_trino
+    ranger.policy-cache-dir=/data/trino/ranger/cache
+    ranger.poll-interval=30s
+
+  ranger-trino-security.xml: |
+    <?xml version="1.0" encoding="UTF-8"?>
+    <configuration>
+        <property>
+            <name>ranger.plugin.trino.service.name</name>
+            <value>dev_trino</value>
+        </property>
+        <property>
+            <name>ranger.plugin.trino.policy.source.impl</name>
+            <value>org.apache.ranger.admin.client.RangerAdminRESTClient</value>
+        </property>
+        <property>
+            <name>ranger.plugin.trino.policy.rest.url</name>
+            <value>http://ranger-admin:6080</value>
+        </property>
+        <property>
+            <name>ranger.plugin.trino.policy.pollIntervalMs</name>
+            <value>30000</value>
+        </property>
+        <property>
+            <name>ranger.plugin.trino.policy.cache.dir</name>
+            <value>/data/trino/ranger/cache</value>
+        </property>
+    </configuration>
+
+  ranger-trino-audit.xml: |
+    <?xml version="1.0" encoding="UTF-8"?>
+    <configuration>
+        <property>
+            <name>xasecure.audit.is.enabled</name>
+            <value>true</value>
+        </property>
+        <property>
+            <name>xasecure.audit.destination.log4j</name>
+            <value>true</value>
+        </property>
+    </configuration>
+
+  ranger-trino-policymgr-ssl.xml: |
+    <?xml version="1.0" encoding="UTF-8"?>
+    <configuration>
+        <property>
+            <name>xasecure.policymgr.clientssl.keystore</name>
+            <value></value>
+        </property>
+    </configuration>
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trino-catalog-config
+  namespace: lakehouse
+  labels:
+    app: trino
+    tier: query
+    component: catalog
+data:
+  delta.properties: |
+    connector.name=delta-lake
+    hive.metastore.uri=thrift://hive-metastore:9083
+    fs.native-s3.enabled=true
+    s3.endpoint=http://minio:9000
+    s3.region=us-east-1
+    s3.path-style-access=true
+    s3.aws-access-key=minioadmin
+    s3.aws-secret-key=minioadmin
+    s3.ssl.enabled=false
+    delta.register-table-procedure.enabled=true
+    delta.metadata.cache-ttl=10m
+
+  lakehouse.properties: |
+    connector.name=delta-lake
+    hive.metastore.uri=thrift://hive-metastore:9083
+    fs.native-s3.enabled=true
+    s3.endpoint=http://minio:9000
+    s3.region=us-east-1
+    s3.path-style-access=true
+    s3.aws-access-key=minioadmin
+    s3.aws-secret-key=minioadmin
+    s3.ssl.enabled=false
+    delta.register-table-procedure.enabled=true
+    delta.metadata.cache-ttl=10m
+
+  hive.properties: |
+    connector.name=hive
+    hive.metastore.uri=thrift://hive-metastore:9083
+    fs.native-s3.enabled=true
+    s3.endpoint=http://minio:9000
+    s3.region=us-east-1
+    s3.path-style-access=true
+    s3.aws-access-key=minioadmin
+    s3.aws-secret-key=minioadmin
+    s3.ssl.enabled=false
+    hive.s3.endpoint=http://minio:9000
+    hive.storage-format=PARQUET
+
+  mysql.properties: |
+    connector.name=mysql
+    connection-url=jdbc:mysql://mysql-oltp:3306/ecommerce_oltp
+    connection-user=lakehouse_user
+    connection-password=lakehouse_password
+
+  tpch.properties: |
+    connector.name=tpch
+
+  tpcds.properties: |
+    connector.name=tpcds
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trino-coordinator
+  namespace: lakehouse
+  labels:
+    app: trino
+    tier: query
+    component: coordinator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: trino
+      component: coordinator
+  template:
+    metadata:
+      labels:
+        app: trino
+        tier: query
+        component: coordinator
+    spec:
+      containers:
+        - name: trino-coordinator
+          image: trinodb/trino:435
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8085
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: 2000m
+              memory: 4Gi
+          readinessProbe:
+            httpGet:
+              path: /v1/info
+              port: 8085
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /v1/info
+              port: 8085
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            - name: etc-config
+              mountPath: /etc/trino/node.properties
+              subPath: node-coordinator.properties
+            - name: etc-config
+              mountPath: /etc/trino/jvm.config
+              subPath: jvm.config
+            - name: etc-config
+              mountPath: /etc/trino/config.properties
+              subPath: config.properties
+            - name: etc-config
+              mountPath: /etc/trino/access-control.properties
+              subPath: access-control.properties
+            - name: etc-config
+              mountPath: /etc/trino/ranger-trino-security.xml
+              subPath: ranger-trino-security.xml
+            - name: etc-config
+              mountPath: /etc/trino/ranger-trino-audit.xml
+              subPath: ranger-trino-audit.xml
+            - name: etc-config
+              mountPath: /etc/trino/ranger-trino-policymgr-ssl.xml
+              subPath: ranger-trino-policymgr-ssl.xml
+            - name: catalog-config
+              mountPath: /etc/trino/catalog
+      volumes:
+        - name: etc-config
+          configMap:
+            name: trino-etc-config
+        - name: catalog-config
+          configMap:
+            name: trino-catalog-config
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trino-worker
+  namespace: lakehouse
+  labels:
+    app: trino
+    tier: query
+    component: worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: trino
+      component: worker
+  template:
+    metadata:
+      labels:
+        app: trino
+        tier: query
+        component: worker
+    spec:
+      containers:
+        - name: trino-worker
+          image: trinodb/trino:435
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8085
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: 2000m
+              memory: 4Gi
+          readinessProbe:
+            httpGet:
+              path: /v1/info
+              port: 8085
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /v1/info
+              port: 8085
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            - name: etc-config
+              mountPath: /etc/trino/node.properties
+              subPath: node-worker.properties
+            - name: etc-config
+              mountPath: /etc/trino/jvm.config
+              subPath: jvm.config
+            - name: etc-config
+              mountPath: /etc/trino/config.properties
+              subPath: config-worker.properties
+            - name: etc-config
+              mountPath: /etc/trino/access-control.properties
+              subPath: access-control.properties
+            - name: etc-config
+              mountPath: /etc/trino/ranger-trino-security.xml
+              subPath: ranger-trino-security.xml
+            - name: etc-config
+              mountPath: /etc/trino/ranger-trino-audit.xml
+              subPath: ranger-trino-audit.xml
+            - name: etc-config
+              mountPath: /etc/trino/ranger-trino-policymgr-ssl.xml
+              subPath: ranger-trino-policymgr-ssl.xml
+            - name: catalog-config
+              mountPath: /etc/trino/catalog
+      volumes:
+        - name: etc-config
+          configMap:
+            name: trino-etc-config
+        - name: catalog-config
+          configMap:
+            name: trino-catalog-config

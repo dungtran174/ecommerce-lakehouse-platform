@@ -1,0 +1,44 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# Kubernetes Service Manifest - Trino Coordinator ClusterIP Services
+# Exposes HTTP query and Web UI port 8085
+# ==============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: trino-coordinator
+  namespace: lakehouse
+  labels:
+    app: trino
+    tier: query
+    component: coordinator
+spec:
+  type: ClusterIP
+  selector:
+    app: trino
+    component: coordinator
+  ports:
+    - name: http
+      port: 8085
+      targetPort: 8085
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: trino
+  namespace: lakehouse
+  labels:
+    app: trino
+    tier: query
+    component: coordinator
+spec:
+  type: ClusterIP
+  selector:
+    app: trino
+    component: coordinator
+  ports:
+    - name: http
+      port: 8085
+      targetPort: 8085
+      protocol: TCP
