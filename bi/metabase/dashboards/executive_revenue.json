@@ -1,0 +1,247 @@
+{
+  "name": "Executive Sales Performance & Revenue Trend Dashboard",
+  "description": "C-suite executive monitoring dashboard visualizing revenue trajectory, growth rates (MoM/YoY), AOV, and customer buying rhythms on Trino MPP Lakehouse.",
+  "parameters": [
+    {
+      "id": "date_filter",
+      "name": "Date Range",
+      "slug": "date_range",
+      "type": "date/all-options",
+      "default": null
+    }
+  ],
+  "cards": [
+    {
+      "id": 101,
+      "name": "Total Net Revenue (Gold)",
+      "description": "Cumulative net revenue after discounts from gold_sale_mart.fact_order",
+      "display": "scalar",
+      "visualization_settings": {
+        "scalar.field": "net_revenue",
+        "column_settings": {
+          "[\"name\",\"net_revenue\"]": {
+            "number_style": "currency",
+            "currency": "USD",
+            "decimals": 2
+          }
+        }
+      },
+      "dataset_query": {
+        "type": "native",
+        "native": {
+          "query": "SELECT CAST(SUM(sub_total) AS DECIMAL(18, 2)) AS net_revenue FROM lakehouse.gold_sale_mart.fact_order;"
+        },
+        "database": 1
+      },
+      "grid": {
+        "col": 0,
+        "row": 0,
+        "size_x": 3,
+        "size_y": 3
+      }
+    },
+    {
+      "id": 102,
+      "name": "Total Completed Orders",
+      "description": "Distinct count of completed customer orders",
+      "display": "scalar",
+      "visualization_settings": {
+        "scalar.field": "total_orders",
+        "column_settings": {
+          "[\"name\",\"total_orders\"]": {
+            "number_style": "decimal"
+          }
+        }
+      },
+      "dataset_query": {
+        "type": "native",
+        "native": {
+          "query": "SELECT COUNT(DISTINCT order_id) AS total_orders FROM lakehouse.gold_sale_mart.fact_order;"
+        },
+        "database": 1
+      },
+      "grid": {
+        "col": 3,
+        "row": 0,
+        "size_x": 3,
+        "size_y": 3
+      }
+    },
+    {
+      "id": 103,
+      "name": "Average Order Value (AOV)",
+      "description": "Average net revenue realized per transaction",
+      "display": "scalar",
+      "visualization_settings": {
+        "scalar.field": "aov",
+        "column_settings": {
+          "[\"name\",\"aov\"]": {
+            "number_style": "currency",
+            "currency": "USD",
+            "decimals": 2
+          }
+        }
+      },
+      "dataset_query": {
+        "type": "native",
+        "native": {
+          "query": "SELECT ROUND(CAST(SUM(sub_total) AS DOUBLE) / NULLIF(COUNT(DISTINCT order_id), 0), 2) AS aov FROM lakehouse.gold_sale_mart.fact_order;"
+        },
+        "database": 1
+      },
+      "grid": {
+        "col": 6,
+        "row": 0,
+        "size_x": 3,
+        "size_y": 3
+      }
+    },
+    {
+      "id": 104,
+      "name": "Effective Discount Rate",
+      "description": "Overall discount percentage applied relative to gross revenue",
+      "display": "scalar",
+      "visualization_settings": {
+        "scalar.field": "discount_rate_pct",
+        "column_settings": {
+          "[\"name\",\"discount_rate_pct\"]": {
+            "number_style": "percent",
+            "decimals": 2
+          }
+        }
+      },
+      "dataset_query": {
+        "type": "native",
+        "native": {
+          "query": "SELECT ROUND(CAST(SUM(discount_amt) AS DOUBLE) / NULLIF(SUM(price), 0) * 100, 2) AS discount_rate_pct FROM lakehouse.gold_sale_mart.fact_order;"
+        },
+        "database": 1
+      },
+      "grid": {
+        "col": 9,
+        "row": 0,
+        "size_x": 3,
+        "size_y": 3
+      }
+    },
+    {
+      "id": 105,
+      "name": "Monthly Net Revenue & MoM Growth Rate",
+      "description": "Monthly chronological net revenue run rate and percentage month-over-month expansion",
+      "display": "combo",
+      "visualization_settings": {
+        "graph.dimensions": ["month_year"],
+        "graph.metrics": ["net_revenue", "mom_revenue_growth_pct"],
+        "series_settings": {
+          "net_revenue": {
+            "display": "bar",
+            "title": "Net Revenue ($)"
+          },
+          "mom_revenue_growth_pct": {
+            "display": "line",
+            "axis": "right",
+            "title": "MoM Growth (%)"
+          }
+        }
+      },
+      "dataset_query": {
+        "type": "native",
+        "native": {
+          "query": "WITH monthly_metrics AS (SELECT d.year, d.month, d.month_year, CAST(SUM(f.sub_total) AS DECIMAL(18, 2)) AS net_revenue FROM lakehouse.gold_sale_mart.fact_order f INNER JOIN lakehouse.gold_sale_mart.dim_date d ON f.date_key = d.date_key GROUP BY d.year, d.month, d.month_year) SELECT month_year, net_revenue, ROUND((CAST(net_revenue AS DOUBLE) - LAG(CAST(net_revenue AS DOUBLE)) OVER (ORDER BY year, month)) / NULLIF(LAG(CAST(net_revenue AS DOUBLE)) OVER (ORDER BY year, month), 0) * 100, 2) AS mom_revenue_growth_pct FROM monthly_metrics ORDER BY year, month;"
+        },
+        "database": 1
+      },
+      "grid": {
+        "col": 0,
+        "row": 3,
+        "size_x": 8,
+        "size_y": 6
+      }
+    },
+    {
+      "id": 106,
+      "name": "Quarterly Performance & YoY Expansion",
+      "description": "Quarterly revenue pacing and year-over-year growth benchmarks",
+      "display": "bar",
+      "visualization_settings": {
+        "graph.dimensions": ["quarter_year"],
+        "graph.metrics": ["net_revenue"],
+        "column_settings": {
+          "[\"name\",\"net_revenue\"]": {
+            "number_style": "currency",
+            "currency": "USD"
+          }
+        }
+      },
+      "dataset_query": {
+        "type": "native",
+        "native": {
+          "query": "WITH quarterly_metrics AS (SELECT d.year, d.quarter, d.quarter_year, CAST(SUM(f.sub_total) AS DECIMAL(18, 2)) AS net_revenue FROM lakehouse.gold_sale_mart.fact_order f INNER JOIN lakehouse.gold_sale_mart.dim_date d ON f.date_key = d.date_key GROUP BY d.year, d.quarter, d.quarter_year) SELECT quarter_year, net_revenue, ROUND((CAST(net_revenue AS DOUBLE) - LAG(CAST(net_revenue AS DOUBLE), 4) OVER (ORDER BY year, quarter)) / NULLIF(LAG(CAST(net_revenue AS DOUBLE), 4) OVER (ORDER BY year, quarter), 0) * 100, 2) AS yoy_growth_pct FROM quarterly_metrics ORDER BY year, quarter;"
+        },
+        "database": 1
+      },
+      "grid": {
+        "col": 8,
+        "row": 3,
+        "size_x": 4,
+        "size_y": 6
+      }
+    },
+    {
+      "id": 107,
+      "name": "Daily Sales Velocity & 7-Day Moving Average",
+      "description": "Continuous daily sales run-rate overlaid with 7-day smoothing window",
+      "display": "line",
+      "visualization_settings": {
+        "graph.dimensions": ["calendar_date"],
+        "graph.metrics": ["daily_net_revenue", "moving_avg_7d_net_revenue"],
+        "series_settings": {
+          "daily_net_revenue": {
+            "title": "Daily Net Revenue ($)",
+            "line_style": "solid"
+          },
+          "moving_avg_7d_net_revenue": {
+            "title": "7-Day Moving Avg ($)",
+            "line_style": "dashed"
+          }
+        }
+      },
+      "dataset_query": {
+        "type": "native",
+        "native": {
+          "query": "WITH daily_metrics AS (SELECT d.calendar_date, CAST(SUM(f.sub_total) AS DECIMAL(18, 2)) AS daily_net_revenue FROM lakehouse.gold_sale_mart.fact_order f INNER JOIN lakehouse.gold_sale_mart.dim_date d ON f.date_key = d.date_key GROUP BY d.calendar_date) SELECT calendar_date, daily_net_revenue, ROUND(AVG(CAST(daily_net_revenue AS DOUBLE)) OVER (ORDER BY calendar_date ROWS BETWEEN 6 PRECEDING AND CURRENT ROW), 2) AS moving_avg_7d_net_revenue FROM daily_metrics ORDER BY calendar_date ASC;"
+        },
+        "database": 1
+      },
+      "grid": {
+        "col": 0,
+        "row": 9,
+        "size_x": 8,
+        "size_y": 5
+      }
+    },
+    {
+      "id": 108,
+      "name": "Day-of-Week Customer Shopping Distribution",
+      "description": "Total revenue and share of sales generated across days of the week",
+      "display": "pie",
+      "visualization_settings": {
+        "pie.dimension": "day_name",
+        "pie.metric": "net_revenue"
+      },
+      "dataset_query": {
+        "type": "native",
+        "native": {
+          "query": "SELECT d.day_name, CAST(SUM(f.sub_total) AS DECIMAL(18, 2)) AS net_revenue FROM lakehouse.gold_sale_mart.fact_order f INNER JOIN lakehouse.gold_sale_mart.dim_date d ON f.date_key = d.date_key GROUP BY d.day_name, d.day_of_week ORDER BY net_revenue DESC;"
+        },
+        "database": 1
+      },
+      "grid": {
+        "col": 8,
+        "row": 9,
+        "size_x": 4,
+        "size_y": 5
+      }
+    }
+  ]
+}
