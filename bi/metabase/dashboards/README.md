@@ -81,3 +81,45 @@ SELECT
     ROUND(CAST(SUM(f.sub_total) AS DOUBLE) / NULLIF(COUNT(DISTINCT f.order_id), 0), 2) AS aov
 FROM lakehouse.gold_sale_mart.fact_order f;
 ```
+
+---
+
+## 5. Product Catalog, Brand Origin & Payment Channel Dashboard
+
+This dashboard visualizes merchandise sales, category concentration, cross-engine brand origin federation, and consumer payment method market share (Momo, ZaloPay, ShopeePay, VNPay, COD, Visa).
+
+### Dashboard Layout & Visual Cards
+
+| Card ID | Metric / Visualization | Display Type | Grain / Dimensions | Data Source |
+| :--- | :--- | :--- | :--- | :--- |
+| **#201** | Top 10 Products by Net Revenue | Bar Chart | `product_name` | `lakehouse.gold_sale_mart.fact_order_items` + `dim_product` |
+| **#202** | Category Revenue Distribution | Donut / Pie | `category` | `lakehouse.gold_sale_mart.fact_order_items` + `dim_product` |
+| **#203** | Brand Origin Contribution | Bar Chart | `country_of_origin` | **Federated Join:** `lakehouse` + `mysql.ecommerce_oltp.brands` |
+| **#204** | Payment Method Market Share | Pie Chart | `display_name` | `lakehouse.gold_sale_mart.fact_order` + `dim_payment_method` |
+| **#205** | Payment Channel Type Share | Bar Chart | `payment_type` | `lakehouse.gold_sale_mart.fact_order` + `dim_payment_method` |
+| **#206** | Average Order Value by Channel | Bar Chart | `display_name` | `lakehouse.gold_sale_mart.fact_order` + `dim_payment_method` |
+
+---
+
+## 6. Cross-Engine Federated Query Architecture
+
+Trino seamlessly coordinates distributed query execution across storage engines:
+1. **Delta Lake Parquet on MinIO S3:** Stores order line items (`fact_order_items`) and denormalized products (`dim_product`).
+2. **MySQL OLTP:** Hosts live operational brand catalogs (`mysql.ecommerce_oltp.brands`).
+
+```
+ +-------------------------------------+       +------------------------------------+
+ |   Delta Lake Gold Data Mart         |       |   MySQL 8.0 OLTP Database          |
+ |   fact_order_items + dim_product    |       |   ecommerce_oltp.brands            |
+ +------------------+------------------+       +-----------------+------------------+
+                    |                                            |
+                    +--------------------+-----------------------+
+                                         |
+                       Trino Distributed Hash Join
+                                         v
+                    +------------------------------------+
+                    |   Federated Analytical Result      |
+                    |   (Product + Brand Origin + Sales) |
+                    +------------------------------------+
+```
+

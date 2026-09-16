@@ -1,0 +1,176 @@
+{
+  "name": "Product Catalog, Brand Origin & Payment Channel Dashboard",
+  "description": "Category performance, top SKU ranking, cross-engine brand origin federation, and digital payment market share analytics on Trino MPP.",
+  "parameters": [
+    {
+      "id": "category_filter",
+      "name": "Product Category",
+      "slug": "category",
+      "type": "string/=",
+      "default": null
+    }
+  ],
+  "cards": [
+    {
+      "id": 201,
+      "name": "Top 10 Best-Selling Products by Revenue",
+      "description": "Top product SKUs ranked by net revenue from fact_order_items and dim_product",
+      "display": "bar",
+      "visualization_settings": {
+        "graph.dimensions": ["product_name"],
+        "graph.metrics": ["total_net_revenue"],
+        "column_settings": {
+          "[\"name\",\"total_net_revenue\"]": {
+            "number_style": "currency",
+            "currency": "USD"
+          }
+        }
+      },
+      "dataset_query": {
+        "type": "native",
+        "native": {
+          "query": "SELECT p.product_name, CAST(SUM(foi.sub_total) AS DECIMAL(18, 2)) AS total_net_revenue, SUM(foi.quantity) AS units_sold FROM lakehouse.gold_sale_mart.fact_order_items foi INNER JOIN lakehouse.gold_sale_mart.dim_product p ON foi.product_key = p.product_id GROUP BY p.product_name ORDER BY total_net_revenue DESC LIMIT 10;"
+        },
+        "database": 1
+      },
+      "grid": {
+        "col": 0,
+        "row": 0,
+        "size_x": 7,
+        "size_y": 6
+      }
+    },
+    {
+      "id": 202,
+      "name": "Category Revenue Distribution",
+      "description": "Share of net revenue by product merchandise category",
+      "display": "pie",
+      "visualization_settings": {
+        "pie.dimension": "category",
+        "pie.metric": "category_net_revenue"
+      },
+      "dataset_query": {
+        "type": "native",
+        "native": {
+          "query": "SELECT p.category, CAST(SUM(foi.sub_total) AS DECIMAL(18, 2)) AS category_net_revenue FROM lakehouse.gold_sale_mart.fact_order_items foi INNER JOIN lakehouse.gold_sale_mart.dim_product p ON foi.product_key = p.product_id GROUP BY p.category ORDER BY category_net_revenue DESC;"
+        },
+        "database": 1
+      },
+      "grid": {
+        "col": 7,
+        "row": 0,
+        "size_x": 5,
+        "size_y": 6
+      }
+    },
+    {
+      "id": 203,
+      "name": "Brand Origin Geographic Contribution (Federated)",
+      "description": "Federated cross-engine join between Delta Lake fact_order_items and MySQL brands",
+      "display": "bar",
+      "visualization_settings": {
+        "graph.dimensions": ["country_of_origin"],
+        "graph.metrics": ["origin_net_revenue"],
+        "column_settings": {
+          "[\"name\",\"origin_net_revenue\"]": {
+            "number_style": "currency",
+            "currency": "USD"
+          }
+        }
+      },
+      "dataset_query": {
+        "type": "native",
+        "native": {
+          "query": "SELECT COALESCE(b.brand_origin, p.brand_origin, 'Unknown') AS country_of_origin, CAST(SUM(foi.sub_total) AS DECIMAL(18, 2)) AS origin_net_revenue FROM lakehouse.gold_sale_mart.fact_order_items foi INNER JOIN lakehouse.gold_sale_mart.dim_product p ON foi.product_key = p.product_id LEFT JOIN mysql.ecommerce_oltp.brands b ON p.brand_name = b.brand_name GROUP BY COALESCE(b.brand_origin, p.brand_origin, 'Unknown') ORDER BY origin_net_revenue DESC;"
+        },
+        "database": 1
+      },
+      "grid": {
+        "col": 0,
+        "row": 6,
+        "size_x": 6,
+        "size_y": 5
+      }
+    },
+    {
+      "id": 204,
+      "name": "Payment Method Revenue Market Share",
+      "description": "Processed order revenue split across payment methods (Momo, ZaloPay, ShopeePay, VNPay, COD, Visa)",
+      "display": "pie",
+      "visualization_settings": {
+        "pie.dimension": "display_name",
+        "pie.metric": "total_net_revenue"
+      },
+      "dataset_query": {
+        "type": "native",
+        "native": {
+          "query": "SELECT pm.display_name, CAST(SUM(f.sub_total) AS DECIMAL(18, 2)) AS total_net_revenue FROM lakehouse.gold_sale_mart.fact_order f INNER JOIN lakehouse.gold_sale_mart.dim_payment_method pm ON f.payment_method_key = pm.payment_method_id GROUP BY pm.display_name ORDER BY total_net_revenue DESC;"
+        },
+        "database": 1
+      },
+      "grid": {
+        "col": 6,
+        "row": 6,
+        "size_x": 6,
+        "size_y": 5
+      }
+    },
+    {
+      "id": 205,
+      "name": "Payment Channel Type Share (E-Wallet vs COD)",
+      "description": "Adoption of cashless payment types versus Cash On Delivery",
+      "display": "bar",
+      "visualization_settings": {
+        "graph.dimensions": ["payment_type"],
+        "graph.metrics": ["total_orders"],
+        "column_settings": {
+          "[\"name\",\"total_orders\"]": {
+            "number_style": "decimal"
+          }
+        }
+      },
+      "dataset_query": {
+        "type": "native",
+        "native": {
+          "query": "SELECT pm.type AS payment_type, COUNT(DISTINCT f.order_id) AS total_orders, CAST(SUM(f.sub_total) AS DECIMAL(18, 2)) AS total_net_revenue FROM lakehouse.gold_sale_mart.fact_order f INNER JOIN lakehouse.gold_sale_mart.dim_payment_method pm ON f.payment_method_key = pm.payment_method_id GROUP BY pm.type ORDER BY total_orders DESC;"
+        },
+        "database": 1
+      },
+      "grid": {
+        "col": 0,
+        "row": 11,
+        "size_x": 6,
+        "size_y": 5
+      }
+    },
+    {
+      "id": 206,
+      "name": "Average Order Value by Payment Method",
+      "description": "Comparison of shopping cart basket value across payment providers",
+      "display": "bar",
+      "visualization_settings": {
+        "graph.dimensions": ["display_name"],
+        "graph.metrics": ["aov"],
+        "column_settings": {
+          "[\"name\",\"aov\"]": {
+            "number_style": "currency",
+            "currency": "USD"
+          }
+        }
+      },
+      "dataset_query": {
+        "type": "native",
+        "native": {
+          "query": "SELECT pm.display_name, ROUND(CAST(SUM(f.sub_total) AS DOUBLE) / NULLIF(COUNT(DISTINCT f.order_id), 0), 2) AS aov FROM lakehouse.gold_sale_mart.fact_order f INNER JOIN lakehouse.gold_sale_mart.dim_payment_method pm ON f.payment_method_key = pm.payment_method_id GROUP BY pm.display_name ORDER BY aov DESC;"
+        },
+        "database": 1
+      },
+      "grid": {
+        "col": 6,
+        "row": 11,
+        "size_x": 6,
+        "size_y": 5
+      }
+    }
+  ]
+}
