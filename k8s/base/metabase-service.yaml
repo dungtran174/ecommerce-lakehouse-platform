@@ -1,0 +1,23 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# Metabase Business Intelligence Container Kubernetes Service
+# Exposes port 3000 as ClusterIP
+# ==============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: metabase
+  namespace: lakehouse
+  labels:
+    app: metabase
+    tier: bi
+    component: visualization
+spec:
+  type: ClusterIP
+  selector:
+    app: metabase
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+      protocol: TCP

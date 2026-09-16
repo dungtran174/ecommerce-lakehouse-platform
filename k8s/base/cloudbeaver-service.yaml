@@ -1,0 +1,23 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# CloudBeaver Web SQL IDE Kubernetes Service
+# Exposes port 8978 as ClusterIP
+# ==============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: cloudbeaver
+  namespace: lakehouse
+  labels:
+    app: cloudbeaver
+    tier: client
+    component: web-sql
+spec:
+  type: ClusterIP
+  selector:
+    app: cloudbeaver
+  ports:
+    - name: http
+      port: 8978
+      targetPort: 8978
+      protocol: TCP

@@ -1,0 +1,31 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# Nginx Ingress Manifest for CloudBeaver Web SQL IDE
+# Routes hostname: cloudbeaver.lakehouse.local
+# ==============================================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cloudbeaver-ingress
+  namespace: lakehouse
+  labels:
+    app: cloudbeaver
+    tier: client
+    component: ingress
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+spec:
+  rules:
+    - host: cloudbeaver.lakehouse.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: cloudbeaver
+                port:
+                  number: 8978

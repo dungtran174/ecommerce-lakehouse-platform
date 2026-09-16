@@ -214,6 +214,26 @@ class TestDockerComposeConfig(unittest.TestCase):
         self.assertIn("trino-coordinator:", content)
         self.assertIn("curl -f http://localhost:3000/api/health", content)
 
+    def test_cloudbeaver_service_configuration(self) -> None:
+        """Verify CloudBeaver Web SQL IDE service, persistent volume, networking, and dependencies."""
+        with open(self.compose_file, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        # Storage volume assertions
+        self.assertIn("cloudbeaver_data:", content)
+        self.assertIn("lakehouse_cloudbeaver_data", content)
+
+        # Service assertions
+        self.assertIn("cloudbeaver:", content)
+        self.assertIn("lakehouse-cloudbeaver", content)
+        self.assertIn("image: dbeaver/cloudbeaver:23.3.0", content)
+        self.assertIn("172.28.0.81", content)
+        self.assertIn("cloudbeaver.lakehouse.local", content)
+        self.assertIn("CLOUDBEAVER_PORT", content)
+        self.assertIn("cloudbeaver_data:/opt/cloudbeaver/workspace", content)
+        self.assertIn("trino-coordinator:", content)
+        self.assertIn("curl -f http://localhost:8978/", content)
+
 
 if __name__ == "__main__":
     unittest.main()

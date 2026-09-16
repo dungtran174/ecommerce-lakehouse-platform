@@ -21,8 +21,14 @@ resources:
   - ranger-service.yaml
   - trino-deployment.yaml
   - trino-service.yaml
+  - metabase-deployment.yaml
+  - metabase-service.yaml
+  - cloudbeaver-deployment.yaml
+  - cloudbeaver-service.yaml
   - ../ingress/minio-ingress.yaml
   - ../ingress/spark-ui-ingress.yaml
   - ../ingress/airflow-ingress.yaml
   - ../ingress/ranger-ingress.yaml
   - ../ingress/trino-ingress.yaml
+  - ../ingress/metabase-ingress.yaml
+  - ../ingress/cloudbeaver-ingress.yaml

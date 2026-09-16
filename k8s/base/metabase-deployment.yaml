@@ -1,0 +1,74 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# Metabase Business Intelligence Container Kubernetes Deployment
+# Exposes self-service BI analytics and dashboard UI on port 3000
+# ==============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: metabase
+  namespace: lakehouse
+  labels:
+    app: metabase
+    tier: bi
+    component: visualization
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: metabase
+  template:
+    metadata:
+      labels:
+        app: metabase
+        tier: bi
+        component: visualization
+    spec:
+      containers:
+        - name: metabase
+          image: lakehouse/metabase:0.48.4
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          env:
+            - name: MB_DB_FILE
+              value: /metabase-data/metabase.db
+            - name: MB_DB_TYPE
+              value: h2
+            - name: MB_PLUGINS_DIR
+              value: /plugins
+            - name: MB_EMOJI_IN_LOGS
+              value: "false"
+            - name: MB_ANON_TRACKING_ENABLED
+              value: "false"
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: 2000m
+              memory: 3Gi
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 45
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            - name: metabase-data
+              mountPath: /metabase-data
+      volumes:
+        - name: metabase-data
+          emptyDir: {}
