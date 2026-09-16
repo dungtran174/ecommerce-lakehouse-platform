@@ -30,6 +30,8 @@ volumes:
     name: lakehouse_trino_coordinator_data
   trino_worker_data:
     name: lakehouse_trino_worker_data
+  metabase_data:
+    name: lakehouse_metabase_data
 
 services:
   # ----------------------------------------------------------------------------
@@ -510,7 +512,40 @@ services:
       retries: 5
       start_period: 30s
 
-
-
-
-
+  # ----------------------------------------------------------------------------
+  # Business Intelligence & Self-Service Analytics: Metabase
+  # Visualizes e-commerce lakehouse marts and KPIs via Trino MPP query engine
+  # ----------------------------------------------------------------------------
+  metabase:
+    build:
+      context: ./metabase
+      dockerfile: Dockerfile
+    image: lakehouse/metabase:0.48.4
+    container_name: lakehouse-metabase
+    hostname: metabase
+    restart: unless-stopped
+    environment:
+      MB_DB_FILE: /metabase-data/metabase.db
+      MB_DB_TYPE: h2
+      MB_PLUGINS_DIR: /plugins
+      MB_EMOJI_IN_LOGS: "false"
+      MB_ANON_TRACKING_ENABLED: "false"
+    ports:
+      - "${METABASE_PORT:-3000}:3000"
+    volumes:
+      - metabase_data:/metabase-data
+    networks:
+      lakehouse-net:
+        ipv4_address: 172.28.0.80
+        aliases:
+          - metabase.lakehouse.local
+          - metabase
+    depends_on:
+      trino-coordinator:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 45s

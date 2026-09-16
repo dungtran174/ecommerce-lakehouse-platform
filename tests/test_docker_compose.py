@@ -191,6 +191,29 @@ class TestDockerComposeConfig(unittest.TestCase):
         self.assertIn("config-worker.properties", content)
         self.assertIn("condition: service_healthy", content)
 
+    def test_metabase_service_configuration(self) -> None:
+        """Verify Metabase BI container, persistent volume, networking, and dependencies."""
+        with open(self.compose_file, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        # Storage volume assertions
+        self.assertIn("metabase_data:", content)
+        self.assertIn("lakehouse_metabase_data", content)
+
+        # Service assertions
+        self.assertIn("metabase:", content)
+        self.assertIn("lakehouse-metabase", content)
+        self.assertIn("context: ./metabase", content)
+        self.assertIn("image: lakehouse/metabase:0.48.4", content)
+        self.assertIn("172.28.0.80", content)
+        self.assertIn("metabase.lakehouse.local", content)
+        self.assertIn("METABASE_PORT", content)
+        self.assertIn("metabase_data:/metabase-data", content)
+        self.assertIn("MB_DB_FILE: /metabase-data/metabase.db", content)
+        self.assertIn("MB_PLUGINS_DIR: /plugins", content)
+        self.assertIn("trino-coordinator:", content)
+        self.assertIn("curl -f http://localhost:3000/api/health", content)
+
 
 if __name__ == "__main__":
     unittest.main()
