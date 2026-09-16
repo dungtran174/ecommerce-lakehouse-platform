@@ -123,3 +123,29 @@ Trino seamlessly coordinates distributed query execution across storage engines:
                     +------------------------------------+
 ```
 
+---
+
+## 7. Regional E-Commerce Geographic Order Heatmap Dashboard
+
+This dashboard visualizes regional market penetration across all **63 provinces and cities of Vietnam**, clustering provincial demand into the 3 strategic macroeconomic corridors: **Miền Bắc (Northern)**, **Miền Trung & Tây Nguyên (Central & Highlands)**, and **Miền Nam (Southern)**.
+
+### Dashboard Layout & Visual Cards
+
+| Card ID | Metric / Visualization | Display Type | Grain / Dimensions | Data Source |
+| :--- | :--- | :--- | :--- | :--- |
+| **#301** | Vietnam 63 Provinces Heatmap | Map / Heatmap | `province` (`c.address`) | `fact_order` + `dim_customer` |
+| **#302** | Top 10 Purchasing Power Hubs | Bar Chart | `province` | `fact_order` + `dim_customer` |
+| **#303** | Macro-Regional Revenue Share | Donut / Pie | `macro_region` | `fact_order` + `dim_customer` |
+| **#304** | AOV across Macro Regions | Bar Chart | `macro_region` | `fact_order` + `dim_customer` |
+| **#305** | Fulfillment Lead-Time & SLAs | Table | `province`, `service_tier` | `fact_order` + `dim_customer` |
+
+---
+
+## 8. Macro-Regional Grouping Logic
+
+Provinces are classified in Trino via standard SQL categorization:
+- **Miền Bắc:** Hà Nội, Hải Phòng, Bắc Ninh, Quảng Ninh, Hải Dương, Hưng Yên, Hà Nam, Nam Định, Ninh Bình, Thái Bình, Vĩnh Phúc, Phú Thọ, Thái Nguyên, Bắc Giang, Tuyên Quang, Hà Giang, Cao Bằng, Bắc Kạn, Lạng Sơn, Lào Cai, Yên Bái, Hòa Bình, Sơn La, Điện Biên, Lai Châu.
+- **Miền Trung & Tây Nguyên:** Đà Nẵng, Thừa Thiên Huế, Quảng Trị, Quảng Bình, Hà Tĩnh, Nghệ An, Thanh Hóa, Quảng Nam, Quảng Ngãi, Bình Định, Phú Yên, Khánh Hòa, Ninh Thuận, Bình Thuận, Kon Tum, Gia Lai, Đắk Lắk, Đắk Nông, Lâm Đồng.
+- **Miền Nam:** TP Hồ Chí Minh, Cần Thơ, Bình Dương, Đồng Nai, Bà Rịa - Vũng Tàu, Tây Ninh, Bình Phước, Long An, Tiền Giang, Bến Tre, Trà Vinh, Vĩnh Long, Đồng Tháp, An Giang, Kiên Giang, Hậu Giang, Sóc Trăng, Bạc Liêu, Cà Mau.
+
+

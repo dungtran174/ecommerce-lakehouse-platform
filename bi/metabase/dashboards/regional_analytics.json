@@ -1,0 +1,147 @@
+{
+  "name": "Regional E-Commerce Geographic Order Heatmap Dashboard",
+  "description": "Geographic demand density, provincial purchasing power rankings across 63 provinces of Vietnam, and macro-regional logistics fulfillment metrics on Trino MPP.",
+  "parameters": [
+    {
+      "id": "province_filter",
+      "name": "Province / City",
+      "slug": "province",
+      "type": "string/=",
+      "default": null
+    }
+  ],
+  "cards": [
+    {
+      "id": 301,
+      "name": "Vietnam 63 Provinces Order Density & Revenue Heatmap",
+      "description": "Provincial spatial breakdown of sales volume and net revenue from fact_order and dim_customer",
+      "display": "map",
+      "visualization_settings": {
+        "map.region": "vietnam_provinces",
+        "map.metric": "total_net_revenue",
+        "column_settings": {
+          "[\"name\",\"total_net_revenue\"]": {
+            "number_style": "currency",
+            "currency": "USD"
+          }
+        }
+      },
+      "dataset_query": {
+        "type": "native",
+        "native": {
+          "query": "SELECT COALESCE(c.address, 'Unknown Province') AS province, COUNT(DISTINCT f.order_id) AS total_orders, CAST(SUM(f.sub_total) AS DECIMAL(18, 2)) AS total_net_revenue FROM lakehouse.gold_sale_mart.fact_order f INNER JOIN lakehouse.gold_sale_mart.dim_customer c ON f.customer_key = c.customer_id GROUP BY COALESCE(c.address, 'Unknown Province') ORDER BY total_net_revenue DESC;"
+        },
+        "database": 1
+      },
+      "grid": {
+        "col": 0,
+        "row": 0,
+        "size_x": 7,
+        "size_y": 7
+      }
+    },
+    {
+      "id": 302,
+      "name": "Top 10 Metropolitan Purchasing Power Hubs",
+      "description": "Leading provinces ranked by net revenue contribution",
+      "display": "bar",
+      "visualization_settings": {
+        "graph.dimensions": ["province"],
+        "graph.metrics": ["total_net_revenue"],
+        "column_settings": {
+          "[\"name\",\"total_net_revenue\"]": {
+            "number_style": "currency",
+            "currency": "USD"
+          }
+        }
+      },
+      "dataset_query": {
+        "type": "native",
+        "native": {
+          "query": "SELECT COALESCE(c.address, 'Unknown Province') AS province, CAST(SUM(f.sub_total) AS DECIMAL(18, 2)) AS total_net_revenue FROM lakehouse.gold_sale_mart.fact_order f INNER JOIN lakehouse.gold_sale_mart.dim_customer c ON f.customer_key = c.customer_id GROUP BY COALESCE(c.address, 'Unknown Province') ORDER BY total_net_revenue DESC LIMIT 10;"
+        },
+        "database": 1
+      },
+      "grid": {
+        "col": 7,
+        "row": 0,
+        "size_x": 5,
+        "size_y": 7
+      }
+    },
+    {
+      "id": 303,
+      "name": "Macro-Regional Revenue Share (North / Central / South)",
+      "description": "Consolidated market share across the three economic corridors of Vietnam",
+      "display": "pie",
+      "visualization_settings": {
+        "pie.dimension": "macro_region",
+        "pie.metric": "regional_net_revenue"
+      },
+      "dataset_query": {
+        "type": "native",
+        "native": {
+          "query": "WITH regional_categorization AS (SELECT f.order_id, f.sub_total, CASE WHEN c.address IN ('Hà Nội', 'Hải Phòng', 'Bắc Ninh', 'Quảng Ninh', 'Hải Dương', 'Hưng Yên', 'Hà Nam', 'Nam Định', 'Ninh Bình', 'Thái Bình', 'Vĩnh Phúc', 'Phú Thọ', 'Thái Nguyên', 'Bắc Giang', 'Tuyên Quang', 'Hà Giang', 'Cao Bằng', 'Bắc Kạn', 'Lạng Sơn', 'Lào Cai', 'Yên Bái', 'Hòa Bình', 'Sơn La', 'Điện Biên', 'Lai Châu') THEN 'Miền Bắc' WHEN c.address IN ('Đà Nẵng', 'Thừa Thiên Huế', 'Quảng Trị', 'Quảng Bình', 'Hà Tĩnh', 'Nghệ An', 'Thanh Hóa', 'Quảng Nam', 'Quảng Ngãi', 'Bình Định', 'Phú Yên', 'Khánh Hòa', 'Ninh Thuận', 'Bình Thuận', 'Kon Tum', 'Gia Lai', 'Đắk Lắk', 'Đắk Nông', 'Lâm Đồng') THEN 'Miền Trung & Tây Nguyên' ELSE 'Miền Nam' END AS macro_region FROM lakehouse.gold_sale_mart.fact_order f INNER JOIN lakehouse.gold_sale_mart.dim_customer c ON f.customer_key = c.customer_id) SELECT macro_region, CAST(SUM(sub_total) AS DECIMAL(18, 2)) AS regional_net_revenue FROM regional_categorization GROUP BY macro_region ORDER BY regional_net_revenue DESC;"
+        },
+        "database": 1
+      },
+      "grid": {
+        "col": 0,
+        "row": 7,
+        "size_x": 6,
+        "size_y": 5
+      }
+    },
+    {
+      "id": 304,
+      "name": "Average Order Value (AOV) by Macro Region",
+      "description": "Consumer spending propensity per transaction across regions",
+      "display": "bar",
+      "visualization_settings": {
+        "graph.dimensions": ["macro_region"],
+        "graph.metrics": ["aov"],
+        "column_settings": {
+          "[\"name\",\"aov\"]": {
+            "number_style": "currency",
+            "currency": "USD"
+          }
+        }
+      },
+      "dataset_query": {
+        "type": "native",
+        "native": {
+          "query": "WITH regional_categorization AS (SELECT f.order_id, f.sub_total, CASE WHEN c.address IN ('Hà Nội', 'Hải Phòng', 'Bắc Ninh', 'Quảng Ninh', 'Hải Dương', 'Hưng Yên', 'Hà Nam', 'Nam Định', 'Ninh Bình', 'Thái Bình', 'Vĩnh Phúc', 'Phú Thọ', 'Thái Nguyên', 'Bắc Giang', 'Tuyên Quang', 'Hà Giang', 'Cao Bằng', 'Bắc Kạn', 'Lạng Sơn', 'Lào Cai', 'Yên Bái', 'Hòa Bình', 'Sơn La', 'Điện Biên', 'Lai Châu') THEN 'Miền Bắc' WHEN c.address IN ('Đà Nẵng', 'Thừa Thiên Huế', 'Quảng Trị', 'Quảng Bình', 'Hà Tĩnh', 'Nghệ An', 'Thanh Hóa', 'Quảng Nam', 'Quảng Ngãi', 'Bình Định', 'Phú Yên', 'Khánh Hòa', 'Ninh Thuận', 'Bình Thuận', 'Kon Tum', 'Gia Lai', 'Đắk Lắk', 'Đắk Nông', 'Lâm Đồng') THEN 'Miền Trung & Tây Nguyên' ELSE 'Miền Nam' END AS macro_region FROM lakehouse.gold_sale_mart.fact_order f INNER JOIN lakehouse.gold_sale_mart.dim_customer c ON f.customer_key = c.customer_id) SELECT macro_region, ROUND(CAST(SUM(sub_total) AS DOUBLE) / NULLIF(COUNT(DISTINCT order_id), 0), 2) AS aov FROM regional_categorization GROUP BY macro_region ORDER BY aov DESC;"
+        },
+        "database": 1
+      },
+      "grid": {
+        "col": 6,
+        "row": 7,
+        "size_x": 6,
+        "size_y": 5
+      }
+    },
+    {
+      "id": 305,
+      "name": "Regional Fulfillment Lead-Time & Logistics Service Tiers",
+      "description": "Estimated delivery fulfillment duration based on distance from logistics fulfillment hubs",
+      "display": "table",
+      "visualization_settings": {
+        "table.pivot_column": "delivery_service_tier"
+      },
+      "dataset_query": {
+        "type": "native",
+        "native": {
+          "query": "SELECT COALESCE(c.address, 'Unknown Province') AS province, COUNT(DISTINCT f.order_id) AS total_orders, CAST(SUM(f.sub_total) AS DECIMAL(18, 2)) AS net_revenue, CASE WHEN c.address IN ('Hà Nội', 'TP Hồ Chí Minh', 'Đà Nẵng') THEN 1.2 WHEN c.address IN ('Hải Phòng', 'Bình Dương', 'Đồng Nai', 'Cần Thơ', 'Bắc Ninh') THEN 1.8 WHEN c.address IN ('Lai Châu', 'Điện Biên', 'Hà Giang', 'Cao Bằng', 'Bắc Kạn', 'Kon Tum', 'Đắk Nông') THEN 3.9 ELSE 2.4 END AS estimated_delivery_days, CASE WHEN c.address IN ('Hà Nội', 'TP Hồ Chí Minh', 'Đà Nẵng') THEN 'Tier 1 - Same/Next Day' WHEN c.address IN ('Hải Phòng', 'Bình Dương', 'Đồng Nai', 'Cần Thơ', 'Bắc Ninh') THEN 'Tier 2 - Express (48h)' WHEN c.address IN ('Lai Châu', 'Điện Biên', 'Hà Giang', 'Cao Bằng', 'Bắc Kạn', 'Kon Tum', 'Đắk Nông') THEN 'Tier 4 - Remote (>72h)' ELSE 'Tier 3 - Standard (72h)' END AS delivery_service_tier FROM lakehouse.gold_sale_mart.fact_order f INNER JOIN lakehouse.gold_sale_mart.dim_customer c ON f.customer_key = c.customer_id GROUP BY COALESCE(c.address, 'Unknown Province') ORDER BY total_orders DESC;"
+        },
+        "database": 1
+      },
+      "grid": {
+        "col": 0,
+        "row": 12,
+        "size_x": 12,
+        "size_y": 6
+      }
+    }
+  ]
+}
