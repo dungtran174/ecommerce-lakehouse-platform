@@ -1,0 +1,78 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# Gold Marketing Data Mart: High-Value Purchase Propensity Campaign
+# ==============================================================================
+
+version: 2
+
+models:
+  - name: high_value_purchase_campaign
+    description: >
+      Target customer marketing campaign cohort joining PySpark MLlib propensity
+      scores and contact information for multi-channel promotional activations.
+      Partitioned by (year, month, day) in Delta Lake.
+    columns:
+      - name: customer_id
+        description: "Surrogate customer profile identifier."
+        tests:
+          - not_null
+
+      - name: campaign_date
+        description: "Execution date of the marketing campaign cohort."
+        tests:
+          - not_null
+
+      - name: purchase_probability
+        description: "Predicted next-day purchase probability [0.0, 1.0]."
+        tests:
+          - not_null
+
+      - name: customer_segment
+        description: "Propensity classification segment."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Hot Lead', 'Medium Intent', 'Low Intent']
+
+      - name: campaign_action
+        description: "Recommended promotional touchpoint action."
+        tests:
+          - not_null
+
+      - name: campaign_channel
+        description: "Primary marketing communication channel."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['SMS_AND_PUSH', 'EMAIL', 'DISPLAY_ADS']
+
+      - name: first_name
+        description: "Customer first name for personalized messaging."
+
+      - name: last_name
+        description: "Customer last name / surname."
+
+      - name: email
+        description: "Contact email address (protected by Ranger masking policy)."
+
+      - name: phone
+        description: "Contact mobile phone (protected by Ranger masking policy)."
+
+      - name: predicted_at
+        description: "Timestamp when ML scoring was performed."
+        tests:
+          - not_null
+
+      - name: created_at
+        description: "Timestamp when the record was persisted."
+        tests:
+          - not_null
+
+      - name: year
+        description: "Partition column: campaign execution year."
+
+      - name: month
+        description: "Partition column: campaign execution month."
+
+      - name: day
+        description: "Partition column: campaign execution day."
