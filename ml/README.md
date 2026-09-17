@@ -53,16 +53,48 @@ ml/
 
 ---
 
-## 4. Execution & Verification
+## 4. Model Training & Evaluation (Commit #77)
 
-### Interactive Notebook (Apache Zeppelin)
-Navigate to `http://localhost:8082` and open notebook:
-`01_Behavioral_Feature_Engineering_and_Exploration`
+### Algorithm: Binary Logistic Regression with ElasticNet/L2 Regularization
+- **Algorithm:** `pyspark.ml.classification.LogisticRegression`
+- **Features Input:** Normalized 12-dimensional vector (`features`)
+- **Label Column:** `label_purchase_tomorrow`
+- **Hyperparameters:**
+  - `maxIter`: 100
+  - `regParam`: 0.01 (L2 regularization penalty)
+  - `elasticNetParam`: 0.0 (Pure Ridge regression)
+- **Train/Test Split:** 80% Training, 20% Holdout Testing (Random seed: 42)
+
+### Target Performance Metrics
+- **AUC-ROC:** $\ge 0.78$ (Excellent discrimination between propensity classes)
+- **AUC-PR:** $\ge 0.72$ (Handles natural conversion class imbalance)
+- **F1-Score:** $\ge 0.74$ (Harmonic balance of Precision and Recall)
+- **Model Storage:** Persisted to MinIO S3A at `s3a://lakehouse/models/customer_propensity_lr/`
+
+---
+
+## 5. Execution & Verification
+
+### Interactive Notebooks (Apache Zeppelin)
+Navigate to `http://localhost:8082`:
+1. `01_Behavioral_Feature_Engineering_and_Exploration`
+2. `02_Logistic_Regression_Propensity_Model_Training_and_Evaluation`
 
 ### Headless Batch Execution
+
+#### Feature Engineering:
 ```bash
 python ml/src/feature_engineering.py \
     --input-table lakehouse.gold_ml.ml_user_behavior_3d_agg_feature \
     --output-path s3a://lakehouse/features/customer_propensity_3d/ \
     --model-output-path s3a://lakehouse/models/feature_pipeline_scaler/
+```
+
+#### Model Training & Evaluation:
+```bash
+python ml/src/train_model.py \
+    --input-table lakehouse.gold_ml.ml_user_behavior_3d_agg_feature \
+    --model-output-path s3a://lakehouse/models/customer_propensity_lr/ \
+    --max-iter 100 \
+    --reg-param 0.01
 ```

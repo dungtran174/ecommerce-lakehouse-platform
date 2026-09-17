@@ -1,0 +1,119 @@
+{
+  "paragraphs": [
+    {
+      "text": "%md\n# 02 - Logistic Regression Propensity Model Training & Evaluation\n\n### Modern E-Commerce Data Lakehouse Platform\nThis notebook trains, evaluates, and interprets a binary classification **Logistic Regression** model predicting customer next-day purchase propensity (`label_purchase_tomorrow`).\n\n- **Input Features:** 12 normalized continuous behavioral features from `gold_ml.ml_user_behavior_3d_agg_feature`\n- **Model Algorithm:** PySpark MLlib `LogisticRegression` with L2 regularization\n- **Evaluation Target Metrics:** AUC-ROC (~0.78), F1-Score (~0.74), Precision, Recall, and Confusion Matrix\n- **Artifact Store:** MinIO S3A (`s3a://lakehouse/models/customer_propensity_lr/`)",
+      "user": "anonymous",
+      "dateUpdated": "2026-09-17 11:00:00.000",
+      "config": {
+        "colWidth": 12,
+        "fontSize": 14,
+        "enabled": true,
+        "editorMode": "ace/mode/markdown",
+        "title": true
+      },
+      "title": "Model Training Overview & Architecture",
+      "id": "paragraph_1"
+    },
+    {
+      "text": "%pyspark\n# Step 1: Ingest Gold ML Behavioral Features and Assemble Standardized Feature Vectors\nfrom pyspark.sql.functions import col\nfrom pyspark.ml.feature import VectorAssembler, StandardScaler\nfrom pyspark.ml import Pipeline\n\nfeature_cols = [\n    \"sessions_3d\",\n    \"total_duration_3d\",\n    \"avg_session_duration_3d\",\n    \"total_page_views_3d\",\n    \"total_actions_3d\",\n    \"total_revenue_3d\",\n    \"view_count_3d\",\n    \"add_to_cart_count_3d\",\n    \"purchase_count_3d\",\n    \"search_count_3d\",\n    \"checkout_view_count_3d\",\n    \"cart_conversion_rate_3d\"\n]\nlabel_col = \"label_purchase_tomorrow\"\n\n# Read Gold ML feature mart\nraw_df = spark.read.table(\"gold_ml.ml_user_behavior_3d_agg_feature\")\ncleaned_df = raw_df.fillna({c: 0.0 for c in feature_cols})\n\nassembler = VectorAssembler(inputCols=feature_cols, outputCol=\"raw_features\", handleInvalid=\"keep\")\nscaler = StandardScaler(inputCol=\"raw_features\", outputCol=\"features\", withStd=True, withMean=True)\n\npipeline = Pipeline(stages=[assembler, scaler])\npipeline_model = pipeline.fit(cleaned_df)\nfeatures_df = pipeline_model.transform(cleaned_df).select(\"user_id\", \"prediction_date\", \"features\", label_col)\n\nprint(f\"Total prepared dataset rows: {features_df.count():,}\")\nfeatures_df.show(5, truncate=False)",
+      "user": "anonymous",
+      "dateUpdated": "2026-09-17 11:01:00.000",
+      "config": {
+        "colWidth": 12,
+        "fontSize": 12,
+        "enabled": true,
+        "editorMode": "ace/mode/python",
+        "title": true
+      },
+      "title": "Feature Assembly and Standardization",
+      "id": "paragraph_2"
+    },
+    {
+      "text": "%pyspark\n# Step 2: Stratified Train / Test Split (80% Train, 20% Test)\ntrain_df, test_df = features_df.randomSplit([0.8, 0.2], seed=42)\n\ntrain_count = train_df.count()\ntest_count = test_df.count()\nprint(f\"Training set size: {train_count:,} ({train_count/(train_count+test_count)*100:.1f}%)\")\nprint(f\"Testing set size:  {test_count:,} ({test_count/(train_count+test_count)*100:.1f}%)\")",
+      "user": "anonymous",
+      "dateUpdated": "2026-09-17 11:02:00.000",
+      "config": {
+        "colWidth": 12,
+        "fontSize": 12,
+        "enabled": true,
+        "editorMode": "ace/mode/python",
+        "title": true
+      },
+      "title": "Train / Test Split",
+      "id": "paragraph_3"
+    },
+    {
+      "text": "%pyspark\n# Step 3: Train Logistic Regression Classifier\nfrom pyspark.ml.classification import LogisticRegression\n\nlr = LogisticRegression(\n    featuresCol=\"features\",\n    labelCol=\"label_purchase_tomorrow\",\n    maxIter=100,\n    regParam=0.01,\n    elasticNetParam=0.0\n)\n\nprint(\"Training LogisticRegression model...\")\nlr_model = lr.fit(train_df)\nprint(f\"Model training completed. Intercept: {lr_model.intercept:.4f}\")",
+      "user": "anonymous",
+      "dateUpdated": "2026-09-17 11:03:00.000",
+      "config": {
+        "colWidth": 12,
+        "fontSize": 12,
+        "enabled": true,
+        "editorMode": "ace/mode/python",
+        "title": true
+      },
+      "title": "Fit Logistic Regression Model",
+      "id": "paragraph_4"
+    },
+    {
+      "text": "%pyspark\n# Step 4: Model Evaluation on Hold-Out Test Split\nfrom pyspark.ml.evaluation import BinaryClassificationEvaluator, MulticlassClassificationEvaluator\n\npredictions = lr_model.transform(test_df)\npredictions.select(\"user_id\", \"features\", \"label_purchase_tomorrow\", \"rawPrediction\", \"probability\", \"prediction\").show(5)\n\n# Evaluators\nroc_eval = BinaryClassificationEvaluator(labelCol=\"label_purchase_tomorrow\", rawPredictionCol=\"rawPrediction\", metricName=\"areaUnderROC\")\npr_eval = BinaryClassificationEvaluator(labelCol=\"label_purchase_tomorrow\", rawPredictionCol=\"rawPrediction\", metricName=\"areaUnderPR\")\nf1_eval = MulticlassClassificationEvaluator(labelCol=\"label_purchase_tomorrow\", predictionCol=\"prediction\", metricName=\"f1\")\nprec_eval = MulticlassClassificationEvaluator(labelCol=\"label_purchase_tomorrow\", predictionCol=\"prediction\", metricName=\"weightedPrecision\")\nrec_eval = MulticlassClassificationEvaluator(labelCol=\"label_purchase_tomorrow\", predictionCol=\"prediction\", metricName=\"weightedRecall\")\nacc_eval = MulticlassClassificationEvaluator(labelCol=\"label_purchase_tomorrow\", predictionCol=\"prediction\", metricName=\"accuracy\")\n\nauc_roc = roc_eval.evaluate(predictions)\nauc_pr = pr_eval.evaluate(predictions)\nf1_score = f1_eval.evaluate(predictions)\nprecision = prec_eval.evaluate(predictions)\nrecall = rec_eval.evaluate(predictions)\naccuracy = acc_eval.evaluate(predictions)\n\nprint(f\"=== Test Evaluation Metrics ===\")\nprint(f\"AUC-ROC:   {auc_roc:.4f}\")\nprint(f\"AUC-PR:    {auc_pr:.4f}\")\nprint(f\"F1-Score:  {f1_score:.4f}\")\nprint(f\"Precision: {precision:.4f}\")\nprint(f\"Recall:    {recall:.4f}\")\nprint(f\"Accuracy:  {accuracy:.4f}\")",
+      "user": "anonymous",
+      "dateUpdated": "2026-09-17 11:04:00.000",
+      "config": {
+        "colWidth": 12,
+        "fontSize": 12,
+        "enabled": true,
+        "editorMode": "ace/mode/python",
+        "title": true
+      },
+      "title": "Evaluate Model Performance (AUC-ROC & F1)",
+      "id": "paragraph_5"
+    },
+    {
+      "text": "%pyspark\n# Step 5: Confusion Matrix Calculation\ntp = predictions.filter(\"label_purchase_tomorrow = 1.0 AND prediction = 1.0\").count()\nfp = predictions.filter(\"label_purchase_tomorrow = 0.0 AND prediction = 1.0\").count()\ntn = predictions.filter(\"label_purchase_tomorrow = 0.0 AND prediction = 0.0\").count()\nfn = predictions.filter(\"label_purchase_tomorrow = 1.0 AND prediction = 0.0\").count()\n\nprint(f\"=== Confusion Matrix ===\")\nprint(f\"True Positives  (TP): {tp:,}\")\nprint(f\"False Positives (FP): {fp:,}\")\nprint(f\"True Negatives  (TN): {tn:,}\")\nprint(f\"False Negatives (FN): {fn:,}\")",
+      "user": "anonymous",
+      "dateUpdated": "2026-09-17 11:05:00.000",
+      "config": {
+        "colWidth": 12,
+        "fontSize": 12,
+        "enabled": true,
+        "editorMode": "ace/mode/python",
+        "title": true
+      },
+      "title": "Confusion Matrix Analysis",
+      "id": "paragraph_6"
+    },
+    {
+      "text": "%pyspark\n# Step 6: Feature Importance and Coefficient Interpretation\ncoefficients = lr_model.coefficients.toArray()\nfeature_importance = [(col_name, float(coef)) for col_name, coef in zip(feature_cols, coefficients)]\nfeature_importance.sort(key=lambda x: abs(x[1]), reverse=True)\n\nprint(\"=== Feature Weights (Ranked by Absolute Impact) ===\")\nfor rank, (name, weight) in enumerate(feature_importance, 1):\n    direction = \"(+) Increases\" if weight > 0 else \"(-) Decreases\"\n    print(f\"{rank:2d}. {name:<26} : {weight:+.4f}  [{direction} propensity]\")",
+      "user": "anonymous",
+      "dateUpdated": "2026-09-17 11:06:00.000",
+      "config": {
+        "colWidth": 12,
+        "fontSize": 12,
+        "enabled": true,
+        "editorMode": "ace/mode/python",
+        "title": true
+      },
+      "title": "Feature Importance & Weight Analysis",
+      "id": "paragraph_7"
+    },
+    {
+      "text": "%pyspark\n# Step 7: Persist Trained Model to MinIO S3A Object Storage\nmodel_target_path = \"s3a://lakehouse/models/customer_propensity_lr/\"\nprint(f\"Persisting LogisticRegressionModel to {model_target_path}...\")\n\nlr_model.write().overwrite().save(model_target_path)\nprint(\"Model artifact successfully saved to MinIO object store.\")",
+      "user": "anonymous",
+      "dateUpdated": "2026-09-17 11:07:00.000",
+      "config": {
+        "colWidth": 12,
+        "fontSize": 12,
+        "enabled": true,
+        "editorMode": "ace/mode/python",
+        "title": true
+      },
+      "title": "Model Persistence to MinIO S3A",
+      "id": "paragraph_8"
+    }
+  ],
+  "name": "02_Logistic_Regression_Propensity_Model_Training_and_Evaluation",
+  "id": "02_model_training",
+  "defaultInterpreterGroup": "spark"
+}
