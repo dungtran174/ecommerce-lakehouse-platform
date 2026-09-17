@@ -1,0 +1,92 @@
+{
+  "paragraphs": [
+    {
+      "text": "%md\n# 01 - Behavioral Feature Exploration & Vector Assembly Pipeline\n\n### Modern E-Commerce Data Lakehouse Platform\nThis notebook performs exploratory data analysis (EDA) and feature engineering for the **Customer Next-Day Purchase Propensity** machine learning model.\n\n- **Input Data Mart:** `gold_ml.ml_user_behavior_3d_agg_feature` (Delta Lake on MinIO)\n- **Input Feature Count:** 12 numerical behavioral indicators over a 3-day rolling window\n- **Target Label:** `label_purchase_tomorrow` (Binary 0 or 1)\n- **Transformation Pipeline:** `VectorAssembler` + `StandardScaler` (Z-score normalization)",
+      "user": "anonymous",
+      "dateUpdated": "2026-09-17 10:00:00.000",
+      "config": {
+        "colWidth": 12,
+        "fontSize": 14,
+        "enabled": true,
+        "editorMode": "ace/mode/markdown",
+        "title": true
+      },
+      "title": "Project Overview & Objective",
+      "id": "paragraph_1"
+    },
+    {
+      "text": "%pyspark\n# Step 1: Initialize PySpark Session and Load Gold ML Behavioral Mart\nfrom pyspark.sql.functions import col, count, when, avg, stddev, round\n\nfeature_table = \"gold_ml.ml_user_behavior_3d_agg_feature\"\nprint(f\"Reading feature mart from: {feature_table}\")\n\ndf = spark.read.table(feature_table)\ndf.printSchema()\n\ntotal_records = df.count()\nprint(f\"Total customer behavioral observation records: {total_records:,}\")",
+      "user": "anonymous",
+      "dateUpdated": "2026-09-17 10:01:00.000",
+      "config": {
+        "colWidth": 12,
+        "fontSize": 12,
+        "enabled": true,
+        "editorMode": "ace/mode/python",
+        "title": true
+      },
+      "title": "Load Gold ML Behavioral Feature Store",
+      "id": "paragraph_2"
+    },
+    {
+      "text": "%pyspark\n# Step 2: Target Label Distribution & Class Balance Analysis\nlabel_counts = df.groupBy(\"label_purchase_tomorrow\") \\\n    .agg(count(\"*\").alias(\"record_count\")) \\\n    .withColumn(\"share_pct\", round(col(\"record_count\") / total_records * 100, 2))\n\nlabel_counts.show()\n\npos_count = df.filter(col(\"label_purchase_tomorrow\") == 1).count()\nneg_count = df.filter(col(\"label_purchase_tomorrow\") == 0).count()\nprint(f\"Positive class (purchased tomorrow): {pos_count} ({pos_count/total_records*100:.2f}%)\")\nprint(f\"Negative class (did not purchase):    {neg_count} ({neg_count/total_records*100:.2f}%)\")",
+      "user": "anonymous",
+      "dateUpdated": "2026-09-17 10:02:00.000",
+      "config": {
+        "colWidth": 12,
+        "fontSize": 12,
+        "enabled": true,
+        "editorMode": "ace/mode/python",
+        "title": true
+      },
+      "title": "Target Label Balance & Conversion Rate",
+      "id": "paragraph_3"
+    },
+    {
+      "text": "%pyspark\n# Step 3: Statistical Summary of Core 12 Behavioral Features\nfeature_cols = [\n    \"sessions_3d\",\n    \"total_duration_3d\",\n    \"avg_session_duration_3d\",\n    \"total_page_views_3d\",\n    \"total_actions_3d\",\n    \"total_revenue_3d\",\n    \"view_count_3d\",\n    \"add_to_cart_count_3d\",\n    \"purchase_count_3d\",\n    \"search_count_3d\",\n    \"checkout_view_count_3d\",\n    \"cart_conversion_rate_3d\"\n]\n\nsummary_stats = df.select(feature_cols).describe()\nsummary_stats.show()",
+      "user": "anonymous",
+      "dateUpdated": "2026-09-17 10:03:00.000",
+      "config": {
+        "colWidth": 12,
+        "fontSize": 12,
+        "enabled": true,
+        "editorMode": "ace/mode/python",
+        "title": true
+      },
+      "title": "Behavioral Feature Descriptive Statistics",
+      "id": "paragraph_4"
+    },
+    {
+      "text": "%pyspark\n# Step 4: Build VectorAssembler and StandardScaler Transformation Pipeline\nfrom pyspark.ml.feature import VectorAssembler, StandardScaler\nfrom pyspark.ml import Pipeline\n\n# Impute any missing null values with neutral 0.0\ncleaned_df = df.fillna({c: 0.0 for c in feature_cols})\n\nassembler = VectorAssembler(\n    inputCols=feature_cols,\n    outputCol=\"raw_features\",\n    handleInvalid=\"keep\"\n)\n\nscaler = StandardScaler(\n    inputCol=\"raw_features\",\n    outputCol=\"features\",\n    withStd=True,\n    withMean=True\n)\n\nfeature_pipeline = Pipeline(stages=[assembler, scaler])\npipeline_model = feature_pipeline.fit(cleaned_df)\n\nprocessed_df = pipeline_model.transform(cleaned_df)\nprocessed_df.select(\"user_id\", \"prediction_date\", \"raw_features\", \"features\", \"label_purchase_tomorrow\").show(5, truncate=False)",
+      "user": "anonymous",
+      "dateUpdated": "2026-09-17 10:04:00.000",
+      "config": {
+        "colWidth": 12,
+        "fontSize": 12,
+        "enabled": true,
+        "editorMode": "ace/mode/python",
+        "title": true
+      },
+      "title": "Assemble and Scale Feature Vectors",
+      "id": "paragraph_5"
+    },
+    {
+      "text": "%pyspark\n# Step 5: Split Dataset into Training (80%) and Validation (20%) Sets\ntrain_df, test_df = processed_df.randomSplit([0.8, 0.2], seed=42)\n\nprint(f\"Training set record count:   {train_df.count():,}\")\nprint(f\"Validation set record count: {test_df.count():,}\")\n\n# Persist feature transformation pipeline artifact to MinIO\nmodel_save_path = \"s3a://lakehouse/models/feature_pipeline_scaler\"\npipeline_model.write().overwrite().save(model_save_path)\nprint(f\"Successfully saved fitted feature pipeline model to: {model_save_path}\")",
+      "user": "anonymous",
+      "dateUpdated": "2026-09-17 10:05:00.000",
+      "config": {
+        "colWidth": 12,
+        "fontSize": 12,
+        "enabled": true,
+        "editorMode": "ace/mode/python",
+        "title": true
+      },
+      "title": "Train/Test Split & Pipeline Serialization",
+      "id": "paragraph_6"
+    }
+  ],
+  "name": "01_Behavioral_Feature_Engineering_and_Exploration",
+  "id": "2JBXYZ123",
+  "defaultInterpreterGroup": "spark",
+  "version": "0.10.1"
+}
