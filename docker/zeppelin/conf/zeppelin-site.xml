@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<!-- ============================================================================== -->
+<!-- Modern E-Commerce Data Lakehouse Platform                                       -->
+<!-- Apache Zeppelin Site Configuration                                             -->
+<!-- ============================================================================== -->
+<configuration>
+
+  <property>
+    <name>zeppelin.server.addr</name>
+    <value>0.0.0.0</value>
+    <description>Server binding address</description>
+  </property>
+
+  <property>
+    <name>zeppelin.server.port</name>
+    <value>8080</value>
+    <description>Server HTTP web port</description>
+  </property>
+
+  <property>
+    <name>zeppelin.notebook.dir</name>
+    <value>/zeppelin/notebook</value>
+    <description>Storage path for notebook files</description>
+  </property>
+
+  <property>
+    <name>zeppelin.anonymous.allowed</name>
+    <value>true</value>
+    <description>Allow anonymous access in local development environment</description>
+  </property>
+
+  <property>
+    <name>zeppelin.interpreter.group.order</name>
+    <value>spark,md,sh,python</value>
+    <description>Default interpreter binding order for notebooks</description>
+  </property>
+
+  <property>
+    <name>zeppelin.websocket.max.text.message.size</name>
+    <value>10485760</value>
+    <description>Maximum WebSocket message payload size (10MB)</description>
+  </property>
+
+</configuration>

@@ -34,6 +34,8 @@ volumes:
     name: lakehouse_metabase_data
   cloudbeaver_data:
     name: lakehouse_cloudbeaver_data
+  zeppelin_notebook_data:
+    name: lakehouse_zeppelin_notebook_data
 
 services:
   # ----------------------------------------------------------------------------
@@ -580,3 +582,44 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
+
+  # ----------------------------------------------------------------------------
+  # Interactive Data Science & ML Notebook: Apache Zeppelin
+  # PySpark interpreter integrated with Delta Lake, MinIO, and Hive Metastore
+  # ----------------------------------------------------------------------------
+  zeppelin:
+    build:
+      context: ./zeppelin
+      dockerfile: Dockerfile
+    image: lakehouse/zeppelin:0.10.1
+    container_name: lakehouse-zeppelin
+    hostname: zeppelin
+    restart: unless-stopped
+    ports:
+      - "${ZEPPELIN_PORT:-8082}:8080"
+    environment:
+      ZEPPELIN_PORT: 8080
+      ZEPPELIN_ADDR: 0.0.0.0
+      SPARK_MASTER: "local[*]"
+      MINIO_ENDPOINT: http://minio:9000
+      HIVE_METASTORE_URIS: thrift://hive-metastore:9083
+    volumes:
+      - zeppelin_notebook_data:/zeppelin/notebook
+      - ../ml/notebooks:/zeppelin/notebook/lakehouse_ml
+    networks:
+      lakehouse-net:
+        ipv4_address: 172.28.0.82
+        aliases:
+          - zeppelin.lakehouse.local
+          - zeppelin
+    depends_on:
+      minio:
+        condition: service_healthy
+      hive-metastore:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/api/version || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 45s

@@ -234,6 +234,29 @@ class TestDockerComposeConfig(unittest.TestCase):
         self.assertIn("trino-coordinator:", content)
         self.assertIn("curl -f http://localhost:8978/", content)
 
+    def test_zeppelin_service_configuration(self) -> None:
+        """Verify Apache Zeppelin notebook container, volume, networking, and dependencies."""
+        with open(self.compose_file, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        # Storage volume assertions
+        self.assertIn("zeppelin_notebook_data:", content)
+        self.assertIn("lakehouse_zeppelin_notebook_data", content)
+
+        # Service assertions
+        self.assertIn("zeppelin:", content)
+        self.assertIn("lakehouse-zeppelin", content)
+        self.assertIn("context: ./zeppelin", content)
+        self.assertIn("image: lakehouse/zeppelin:0.10.1", content)
+        self.assertIn("172.28.0.82", content)
+        self.assertIn("zeppelin.lakehouse.local", content)
+        self.assertIn("ZEPPELIN_PORT", content)
+        self.assertIn("zeppelin_notebook_data:/zeppelin/notebook", content)
+        self.assertIn("../ml/notebooks:/zeppelin/notebook/lakehouse_ml", content)
+        self.assertIn("minio:", content)
+        self.assertIn("hive-metastore:", content)
+        self.assertIn("curl -f http://localhost:8080/api/version", content)
+
 
 if __name__ == "__main__":
     unittest.main()

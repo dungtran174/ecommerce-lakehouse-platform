@@ -1,0 +1,74 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# Apache Zeppelin Notebook Container Kubernetes Deployment
+# Interactive exploratory data science and PySpark MLlib platform on port 8080
+# ==============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zeppelin
+  namespace: lakehouse
+  labels:
+    app: zeppelin
+    tier: ml
+    component: notebook
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: zeppelin
+  template:
+    metadata:
+      labels:
+        app: zeppelin
+        tier: ml
+        component: notebook
+    spec:
+      containers:
+        - name: zeppelin
+          image: lakehouse/zeppelin:0.10.1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: ZEPPELIN_PORT
+              value: "8080"
+            - name: ZEPPELIN_ADDR
+              value: "0.0.0.0"
+            - name: SPARK_MASTER
+              value: "local[*]"
+            - name: MINIO_ENDPOINT
+              value: "http://minio:9000"
+            - name: HIVE_METASTORE_URIS
+              value: "thrift://hive-metastore:9083"
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: 2000m
+              memory: 4Gi
+          livenessProbe:
+            httpGet:
+              path: /api/version
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /api/version
+              port: 8080
+            initialDelaySeconds: 45
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            - name: zeppelin-notebook
+              mountPath: /zeppelin/notebook
+      volumes:
+        - name: zeppelin-notebook
+          emptyDir: {}

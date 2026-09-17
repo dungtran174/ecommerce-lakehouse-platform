@@ -25,6 +25,8 @@ resources:
   - metabase-service.yaml
   - cloudbeaver-deployment.yaml
   - cloudbeaver-service.yaml
+  - zeppelin-deployment.yaml
+  - zeppelin-service.yaml
   - ../ingress/minio-ingress.yaml
   - ../ingress/spark-ui-ingress.yaml
   - ../ingress/airflow-ingress.yaml
@@ -32,3 +34,5 @@ resources:
   - ../ingress/trino-ingress.yaml
   - ../ingress/metabase-ingress.yaml
   - ../ingress/cloudbeaver-ingress.yaml
+  - ../ingress/zeppelin-ingress.yaml
+

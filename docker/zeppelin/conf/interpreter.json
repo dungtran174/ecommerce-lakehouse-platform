@@ -1,0 +1,61 @@
+{
+  "interpreterSettings": {
+    "spark": {
+      "id": "spark",
+      "name": "spark",
+      "group": "spark",
+      "properties": {
+        "spark.master": "local[*]",
+        "spark.app.name": "Zeppelin-Lakehouse-PySpark",
+        "spark.driver.memory": "2g",
+        "spark.executor.memory": "2g",
+        "spark.sql.extensions": "io.delta.sql.DeltaSparkSessionExtension",
+        "spark.sql.catalog.spark_catalog": "org.apache.spark.sql.delta.catalog.DeltaCatalog",
+        "spark.sql.sources.default": "delta",
+        "spark.hadoop.fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem",
+        "spark.hadoop.fs.s3a.endpoint": "http://minio:9000",
+        "spark.hadoop.fs.s3a.access.key": "minioadmin",
+        "spark.hadoop.fs.s3a.secret.key": "minioadmin",
+        "spark.hadoop.fs.s3a.path.style.access": "true",
+        "spark.hadoop.fs.s3a.connection.ssl.enabled": "false",
+        "spark.hadoop.fs.s3a.aws.credentials.provider": "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider",
+        "spark.sql.warehouse.dir": "s3a://lakehouse/warehouse",
+        "spark.hadoop.hive.metastore.uris": "thrift://hive-metastore:9083",
+        "spark.hadoop.hive.metastore.schema.verification": "false",
+        "spark.jars.packages": "io.delta:delta-core_2.12:2.2.0,org.apache.hadoop:hadoop-aws:3.3.3,com.amazonaws:aws-java-sdk-bundle:1.12.367",
+        "zeppelin.pyspark.python": "python3",
+        "zeppelin.spark.enableSupportedVersionCheck": "false"
+      },
+      "status": "READY",
+      "interpreterGroup": [
+        {
+          "name": "spark",
+          "class": "org.apache.zeppelin.spark.SparkInterpreter",
+          "defaultInterpreter": true,
+          "editor": {
+            "language": "scala",
+            "editOnDblClick": false
+          }
+        },
+        {
+          "name": "pyspark",
+          "class": "org.apache.zeppelin.spark.PySparkInterpreter",
+          "defaultInterpreter": false,
+          "editor": {
+            "language": "python",
+            "editOnDblClick": false
+          }
+        },
+        {
+          "name": "sql",
+          "class": "org.apache.zeppelin.spark.SparkSqlInterpreter",
+          "defaultInterpreter": false,
+          "editor": {
+            "language": "sql",
+            "editOnDblClick": false
+          }
+        }
+      ]
+    }
+  }
+}

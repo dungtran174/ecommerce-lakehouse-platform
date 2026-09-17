@@ -1,0 +1,23 @@
+# ==============================================================================
+# Modern E-Commerce Data Lakehouse Platform
+# Apache Zeppelin Notebook Container Kubernetes Service
+# Exposes port 8080 as ClusterIP
+# ==============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: zeppelin
+  namespace: lakehouse
+  labels:
+    app: zeppelin
+    tier: ml
+    component: notebook
+spec:
+  type: ClusterIP
+  selector:
+    app: zeppelin
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
