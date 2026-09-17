@@ -209,11 +209,14 @@ For custom volume profiles (`small`, `medium`, `full`) and database seeding opti
 - **Trino Web UI:** `http://localhost:8085`
 - **Metabase:** `http://localhost:3000`
 - **CloudBeaver:** `http://localhost:8978`
+- **Apache Zeppelin:** `http://localhost:8082`
+- **Apache Ranger:** `http://localhost:6080` (admin / rangeradmin)
 
-### 6. Verify Infrastructure Connectivity
+### 6. Verify Infrastructure Connectivity & E2E Pipelines
 Run the automated verification suite to validate Spark Thrift Server connectivity, Hive Metastore catalog integration, and Delta Lake S3A I/O on MinIO:
 ```bash
 python scripts/verify_spark_thrift.py
+pytest tests/test_e2e_pipeline.py
 ```
 
 For complete deployment specifications on Docker Compose and Kubernetes, refer to the [Storage & Compute Infrastructure Guide](docs/setup/infrastructure.md).
