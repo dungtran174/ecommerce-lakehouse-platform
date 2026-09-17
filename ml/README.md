@@ -73,7 +73,24 @@ ml/
 
 ---
 
-## 5. Execution & Verification
+## 5. Daily Batch Inference & Marketing Campaign Export (Commit #78)
+
+The batch inference pipeline scores active customer records and segments them into 3 distinct marketing tiers:
+
+| Tier | Probability Range | Customer Segment | Primary Touchpoint Action | Marketing Channel |
+| :--- | :---: | :--- | :--- | :--- |
+| **Tier 1** | $P \ge 0.70$ | `Hot Lead` | `Send Premium Offer SMS` | `SMS_AND_PUSH` |
+| **Tier 2** | $0.40 \le P < 0.70$ | `Medium Intent` | `Personalized Email Recommendation` | `EMAIL` |
+| **Tier 3** | $P < 0.40$ | `Low Intent` | `Retargeting Display Ad` | `DISPLAY_ADS` |
+
+### Target Campaign Mart: `marketing.high_value_purchase_campaign`
+- **Storage Path:** `s3a://lakehouse/gold/marketing/high_value_purchase_campaign`
+- **Partitioning:** `PARTITIONED BY (year, month, day)`
+- **Key Columns:** `customer_id`, `campaign_date`, `purchase_probability`, `customer_segment`, `campaign_action`, `first_name`, `last_name`, `email`, `phone`, `predicted_at`, `created_at`.
+
+---
+
+## 6. Execution & Verification
 
 ### Interactive Notebooks (Apache Zeppelin)
 Navigate to `http://localhost:8082`:
@@ -82,7 +99,7 @@ Navigate to `http://localhost:8082`:
 
 ### Headless Batch Execution
 
-#### Feature Engineering:
+#### 1. Feature Engineering:
 ```bash
 python ml/src/feature_engineering.py \
     --input-table lakehouse.gold_ml.ml_user_behavior_3d_agg_feature \
@@ -90,11 +107,20 @@ python ml/src/feature_engineering.py \
     --model-output-path s3a://lakehouse/models/feature_pipeline_scaler/
 ```
 
-#### Model Training & Evaluation:
+#### 2. Model Training & Evaluation:
 ```bash
 python ml/src/train_model.py \
     --input-table lakehouse.gold_ml.ml_user_behavior_3d_agg_feature \
     --model-output-path s3a://lakehouse/models/customer_propensity_lr/ \
     --max-iter 100 \
     --reg-param 0.01
+```
+
+#### 3. Daily Batch Scoring & Campaign Cohort Export:
+```bash
+python ml/src/inference.py \
+    --input-table lakehouse.gold_ml.ml_user_behavior_3d_agg_feature \
+    --customer-table lakehouse.sale_mart.dim_customer \
+    --output-path s3a://lakehouse/gold/marketing/high_value_purchase_campaign \
+    --output-table lakehouse.marketing.high_value_purchase_campaign
 ```
