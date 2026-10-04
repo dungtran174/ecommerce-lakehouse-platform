@@ -2,27 +2,16 @@
 
 Hệ thống Data Lakehouse thu thập, lưu trữ, xử lý và phân tích dữ liệu Thương mại điện tử dựa trên kiến trúc Medallion (Bronze → Silver → Gold).
 
-[![Apache Spark](https://img.shields.io/badge/Apache%20Spark-3.3.4-E25A1C.svg?logo=apachespark&logoColor=white)](https://spark.apache.org/)
-[![Delta Lake](https://img.shields.io/badge/Delta%20Lake-2.2.0-00ADD8.svg?logo=delta&logoColor=white)](https://delta.io/)
-[![Trino](https://img.shields.io/badge/Trino-MPP%20SQL-DD00A1.svg?logo=trino&logoColor=white)](https://trino.io/)
-[![dbt](https://img.shields.io/badge/dbt--spark-1.7-FF694B.svg?logo=dbt&logoColor=white)](https://www.getdbt.com/)
-[![Apache Airflow](https://img.shields.io/badge/Apache%20Airflow-2.7-017CEE.svg?logo=apacheairflow&logoColor=white)](https://airflow.apache.org/)
-[![MinIO](https://img.shields.io/badge/MinIO-S3%20Compatible-C72C48.svg?logo=minio&logoColor=white)](https://min.io/)
-[![Apache Ranger](https://img.shields.io/badge/Apache%20Ranger-Governance-24A148.svg)](https://ranger.apache.org/)
-[![Metabase](https://img.shields.io/badge/Metabase-BI%20Analytics-509EE3.svg?logo=metabase&logoColor=white)](https://www.metabase.com/)
-[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED.svg?logo=docker&logoColor=white)](https://www.docker.com/)
-
 ---
 
 ## 1. Giới thiệu & Bài toán giải quyết
 
-### Dự án làm gì?
-Xây dựng pipeline dữ liệu Lakehouse từ đầu đến cuối (End-to-End):
+### Xây dựng pipeline dữ liệu Lakehouse End-to-End:
 - **Thu thập:** Dữ liệu giao dịch từ MySQL (OLTP) và dữ liệu hành vi người dùng clickstream dạng NDJSON (~12GB) từ Web Server qua SFTP.
 - **Xử lý:** Làm sạch, chuẩn hóa, mô hình hóa đa chiều (Galaxy Schema) và tạo feature store theo mô hình Medallion (Bronze → Silver → Gold).
 - **Phục vụ:** Báo cáo quản trị BI (Metabase qua Trino) và Machine Learning dự đoán khả năng mua hàng của khách hàng (Spark MLlib).
 
-### Giải quyết vấn đề gì?
+### Giải quyết vấn đề   
 - **Tránh nghẽn CSDL vận hành (OLTP):** Tách biệt tầng lưu trữ và tính toán phân tích, không chạy query nặng trực tiếp trên MySQL bán hàng.
 - **Xử lý linh hoạt dữ liệu bán cấu trúc:** Clickstream JSON lớn được làm phẳng, ép kiểu và lưu dưới định dạng **Delta Lake** (Parquet) có ACID transactions, time travel và tối ưu chi phí lưu trữ trên **MinIO**.
 - **Thống nhất nền tảng:** Thay thế mô hình 2 tầng cồng kềnh (Data Lake + Data Warehouse riêng biệt) bằng 1 nền tảng Lakehouse duy nhất phục vụ đồng thời cả BI và AI/ML.
